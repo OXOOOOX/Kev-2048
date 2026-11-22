@@ -21,6 +21,7 @@ def cli_parser():
             s.add_argument("--data",type=Path,default=Path("data/stock_scale"))
             s.add_argument("--preset",choices=("smoke","stock"),default="smoke")
             s.add_argument("--require-historical-init",action="store_true")
+            s.add_argument("--feature-cache",type=Path,help="Reuse stock training features in this local directory")
         else:
             s.add_argument("--seed",type=int,action="append",required=True)
             s.add_argument("--cap",type=int,default=400)
@@ -36,6 +37,7 @@ def main():
         out=fetch(a.out)
     else:
         if a.threads<1 or (a.command=="play" and a.cap<1):p.error("threads/cap must be positive")
+        if a.command=="train" and a.feature_cache is not None and a.preset!="stock":p.error("--feature-cache requires --preset stock")
         os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG",":4096:8")
         from . import native
         if a.command=="train":out=native.train(a,*data.checked(a.data))

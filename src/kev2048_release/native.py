@@ -1,5 +1,9 @@
 """Actual native Kev, lazily imported by the no-dependency CLI."""
 import copy, gc, os, random, shutil, statistics, time
+import inspect
+import platform
+import subprocess
+from importlib.metadata import PackageNotFoundError, version
 from pathlib import Path
 os.environ.update(HF_HUB_OFFLINE="1", TRANSFORMERS_OFFLINE="1",TOKENIZERS_PARALLELISM="false")
 import torch
@@ -7,6 +11,7 @@ from torch.nn import functional as F
 from kev.checkpoint import Checkpoint, LoadOptions, write_meta
 from kev.api import SystemOneRequest, to_record
 from kev.model import rows_of
+from . import feature_cache
 from .assets import FILES
 from .data import digest,write
 from .game import Game,legal,nested
@@ -103,6 +108,86 @@ def configure(args):
         torch.backends.cuda.matmul.allow_tf32=False
         torch.backends.cudnn.allow_tf32=False
 
+def _encoding_identity(tok, m, meta, device):
+    packages = {}
+    for name in ("torch", "kev", "transformers", "peft", "tokenizers", "pydantic", "accelerate",
+                 "kernels", "causal-conv1d", "flash-linear-attention", "fla-core", "triton", "triton-windows"):
+        try:
+            packages[name] = version(name)
+        except PackageNotFoundError:
+            packages[name] = None
+
+    runtime = {
+        "device": device,
+        "platform": platform.platform(),
+        "processor": platform.processor(),
+        "torch": torch.__version__,
+        "threads": torch.get_num_threads(),
+        "interop_threads": torch.get_num_interop_threads(),
+        "deterministic": torch.are_deterministic_algorithms_enabled(),
+        "matmul_precision": torch.get_float32_matmul_precision(),
+    }
+    if device == "cuda":
+        props = torch.cuda.get_device_properties(device)
+        try:
+            driver = subprocess.run(
+                ["nvidia-smi", "--query-gpu=driver_version", "--format=csv,noheader"],
+                check=True, capture_output=True, text=True, timeout=3,
+                creationflags=getattr(subprocess, "CREATE_NO_WINDOW", 0),
+            ).stdout.splitlines()
+        except (OSError, subprocess.SubprocessError):
+            driver = []
+        runtime.update(
+            gpu=props.name, compute_capability=[props.major, props.minor], gpu_uuid=str(getattr(props, "uuid", None)),
+            cuda=torch.version.cuda, cudnn=torch.backends.cudnn.version(), driver=sorted(set(driver)),
+            matmul_tf32=torch.backends.cuda.matmul.allow_tf32, cudnn_tf32=torch.backends.cudnn.allow_tf32,
+            attention_kernels={name: getattr(torch.backends.cuda, name)() for name in
+                               ("flash_sdp_enabled", "math_sdp_enabled", "mem_efficient_sdp_enabled", "cudnn_sdp_enabled")},
+            cuda_env={name: os.environ.get(name) for name in
+                      ("CUBLAS_WORKSPACE_CONFIG", "TORCH_ALLOW_TF32_CUBLAS_OVERRIDE", "NVIDIA_TF32_OVERRIDE")},
+        )
+    return {
+        "prompt": PROMPT,
+        "encoder_source": [inspect.getsource(fn) for fn in (record, hidden, cache, local_model)],
+        "kev_source": [digest(inspect.getfile(obj)) for obj in (Checkpoint, to_record, rows_of)],
+        "packages": packages,
+        "runtime": runtime,
+        # The pointer tensor values are not used by hidden(). Some checkpoint metadata is.
+        "encoder_weights": meta.weights,
+        "saved_weights_dtype": meta.weights_dtype,
+        "loaded_dtype": m.dtype,
+        "option_isolation": m.option_isolation,
+        "attention": m.lm.config._attn_implementation,
+        "tokenizer_type": type(tok).__qualname__,
+        "pad_id": m.pad_id,
+    }
+
+
+def _training_features(args, lock, data, tok, model, meta, inputs):
+    rows = data["train"]
+    if inputs is None:
+        features = cache(tok, model, rows, "train")
+        return features, parity(tok, model, rows[:8], features[:8]), {"status": "disabled"}
+
+    encoder = _encoding_identity(tok, model, meta, args.device)
+    key = feature_cache.cache_key(inputs, lock, data, encoder)
+    require(inputs == feature_cache.frozen_inputs(args.base, args.checkpoint),
+            "Frozen model inputs changed while loading or hashing them; retry with a stable snapshot")
+    path = args.feature_cache.resolve() / f"{key}.features"
+    counts = [len(row["valid_moves"]) for row in rows]
+    hidden_size = model.lm.config.hidden_size
+    features, reason = feature_cache.read_features(path, key, counts, hidden_size, args.device)
+    info = {"key": key, "path": str(path), "status": "hit" if reason is None else "miss"}
+    if reason is not None:
+        info["reason"] = reason
+    print(f"train feature cache {info['status']}: {path}" + (f" ({reason})" if reason else ""), flush=True)
+    if features is None:
+        features = cache(tok, model, rows, "train")
+    verification = parity(tok, model, rows[:8], features[:8])
+    if reason is not None:
+        feature_cache.write_features(path, key, features, counts, hidden_size)
+    return features, verification, info
+
 def train(args,lock,data):
     timing={}
     def mark(phase,started):
@@ -119,11 +204,11 @@ def train(args,lock,data):
     if args.preset=="smoke":tr=tr[:8];dv=dv[:8]
     else:require(len(tr)==512 and len(dv)==128,"Stock preset requires the 512/128 locked fixtures")
     args.out.mkdir(parents=True,exist_ok=False)
+    inputs = feature_cache.frozen_inputs(args.base, args.checkpoint) if args.feature_cache is not None else None
     start=time.perf_counter()
     tok,m,meta=local_model(args.base,args.checkpoint,args.device)
     start=mark("initial_model_load",start)
-    trf=cache(tok,m,tr,"train")
-    p_train=parity(tok,m,tr[:8],trf[:8])
+    trf, p_train, feature_info = _training_features(args, lock, {"train": tr, "dev": dv}, tok, m, meta, inputs)
     start=mark("train_encoding",start)
     head=copy.deepcopy(m.head).requires_grad_(True)
     with torch.no_grad():refs=[m.head(q,k).softmax(-1) for q,k in trf]
@@ -172,7 +257,7 @@ def train(args,lock,data):
     jsonl(args.out/"baseline-dev.jsonl",old);jsonl(args.out/"candidate-dev.jsonl",new)
     report=dict(preset=args.preset,device=args.device,dtype="fp32",train=len(tr),dev=len(dv),losses=losses,changed=changed,
                 candidate_head_sha256=cksha,fixture_manifest=lock["splits"],initialization="historical_v2" if historical else "substitute_local_checkpoint",
-                initial_head_sha256=init_sha,timing=timing,
+                initial_head_sha256=init_sha,timing=timing,training_feature_cache=feature_info,
                 train_parity=p_train,reload_parity=pr,metrics=data,meets_stock_numeric_gate=threshold,
                 historical_protocol_dev_pass=threshold if historical else None)
     write(args.out/"result.json",report)

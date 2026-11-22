@@ -24,7 +24,7 @@ python -m pip install --no-deps "git+https://github.com/jaredpalmer/kev.git@65b1
 python -c "import torch, kev; print(torch.__version__, torch.cuda.is_available())"
 ```
 
-The cloud test used PyTorch 2.15.0+cpu, Transformers 5.24.0 and the other versions listed. The upstream checkout's dependency constraints differ from the cloud runtime, so the source install deliberately does not replace those versions. CPU smoke is verified. Windows CUDA is an opt-in FP32 path, not a verified bitwise reproduction or tested hardware setup. If deterministic CUDA kernels or native parity reject it, use CPU; no precision switch happens automatically. Budget 8 GB free host RAM and approximately 2 GB disk for model assets. GPU memory needs depend on its runtime, not only on the size of the weight files.
+The cloud test used PyTorch 2.15.0+cpu, Transformers 5.24.0 and the other versions listed. The upstream checkout's dependency constraints differ from the cloud runtime, so the source install deliberately does not replace those versions. CPU smoke is verified. Windows CUDA is an opt-in FP32 path, and its results can differ numerically from CPU. If deterministic CUDA kernels or native parity reject it, use CPU; no precision switch happens automatically. Budget 8 GB free host RAM and approximately 2 GB disk for model assets. GPU memory needs depend on its runtime, not only on the size of the weight files.
 
 ## Pinned model downloads
 
@@ -56,6 +56,18 @@ kev2048 train --preset stock --base assets/qwen-base --checkpoint assets/your-v2
 
 A fresh clone using official weights genuinely executes the same fit but is **not** expected to reproduce the cloud V2→candidate outcomes. Its mathematical gate statistic is separated from eligibility for the historical protocol, and the artifact records which initialization it actually used. Torch/platform versions may change numerical results even with the exact V2 starting SHA.
 
+## Reuse stock training features across runs
+
+Pass the same `--feature-cache` directory to stock training commands. Use a fresh `--out` for each run:
+
+```sh
+kev2048 train --preset stock --device cuda --threads 2 --base assets/qwen-base --checkpoint assets/official-kev --feature-cache .cache/stock-training-features --out runs/stock-cached
+```
+
+The cache stores the frozen encoder's FP32 vector for the decision position and one vector per legal action for each of the 512 training boards. A second run can load those vectors from disk even when initialized with a different pointer head. Each run computes its own reference probabilities and checks eight cached boards against official Kev. Development features are computed after saving and hashing the new checkpoint.
+
+The cache key includes the local base and adapter files, tokenizer, checked data, encoding implementation and settings, and device/runtime. Changes to those inputs create a new entry. Invalid or corrupted cache entries are rebuilt. `training_feature_cache` in `result.json` records the hit or miss, and the existing training encoding timer includes the lookup, parity check, and any encoding or write. The cache is optional, and `.cache/` is gitignored.
+
 ## Benchmark the Windows laptop (PowerShell)
 
 After the setup and the one-time model download above, run from the cloned repository root. The full benchmark is offline. First confirm that PyTorch can see the NVIDIA GPU; if `cuda_available` is False, install a CUDA-enabled PyTorch build for your driver before attempting a comparison.
@@ -71,7 +83,7 @@ Use AC power and the same laptop power profile. After smoke passes, use `--prese
 
 Read `runs/bench-smoke/benchmark.json` for the median, per-run elapsed time, and speed ratio. The total includes imports, model loading, training, dev evaluation, checkpoint save and official reload. Each training result also times initial model load, feature encoding with the parity check, head optimization, checkpoint save, dev evaluation, and reload separately. CUDA is synchronized at phase boundaries so queued work is included in the phase that launched it. Use the stock result when judging training throughput; the tiny smoke run is more sensitive to startup. If CUDA fails or the inputs do not match, the script records the failing log and reports no speed ratio. It never silently changes precision or retries on CPU.
 
-This benchmark is ready to try from PowerShell. The launcher logic was tested in Linux with simulated CPU/CUDA run results; **no Windows or laptop CUDA speed has been measured here**.
+The [Windows CUDA run log](experiments/windows-cuda-2026-11-22.md) records measured smoke and stock timings on an RTX 3080 Laptop GPU, plus the paired gameplay and feature cache experiments.
 
 ## Protocol and limits
 
