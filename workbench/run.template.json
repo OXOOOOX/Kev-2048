@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "run_id": null,
+  "kind": "play",
+  "variant": null,
+  "status": "planned",
+  "started_at_utc": null,
+  "ended_at_utc": null,
+  "files": {
+    "moves": "moves.jsonl",
+    "progress": null,
+    "result": "result.json"
+  },
+  "seeds": [],
+  "max_moves_per_game": null,
+  "device": null,
+  "dtype": null,
+  "code_commit": null,
+  "model": {
+    "profile": null,
+    "revision": null,
+    "base_weights_sha256": null,
+    "head_sha256": null,
+    "adapter_sha256": null
+  },
+  "data": {
+    "fixture_manifest_sha256": null
+  },
+  "reference_run_id": null
+}

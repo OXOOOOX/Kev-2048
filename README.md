@@ -4,7 +4,7 @@
 
 ## 本地监控和即时回看
 
-- **即时回看**：双击 `workbench/index.html`，点「即时回看」，选择本地的 `moves.jsonl`。不联网，不加载模型。比较时仅对齐步数，两边的棋盘不一定相同。已有实测棋局保留在 `experiments/traces/`，可直接导入；仓库不再单独保存一份录好的 HTML 棋局。
+- **即时回看**：双击 `workbench/index.html`，点「即时回看」，可先选项目的 `runs/` 或 `experiments/traces/` 文件夹再勾选记录，也可直接选择 `moves.jsonl`。不联网，不加载模型。比较时仅对齐步数，两边的棋盘不一定相同。已有实测棋局保留在 `experiments/traces/`，可直接导入；仓库不再单独保存一份录好的 HTML 棋局。
 - **只读监控**：从仓库根目录运行 `python workbench/live.py`，打开 `http://127.0.0.1:8765/`。默认不启动模型、不开放控制命令，可显式联接本机训练、推理、测速文件。详细步骤见 [工作台说明](workbench/README.md)。
 
 ## 重跑训练和评测

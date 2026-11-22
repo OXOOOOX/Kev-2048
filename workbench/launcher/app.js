@@ -26,7 +26,7 @@ function options(select,values,chosen){
 const eq=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
 const maxP=g=>g.frames.at(-1).p;
 const frame=(g,p)=>g.frames[Math.min(p,maxP(g))];
-const revealFile=g=>'文件 '+g.sourceOrder+' · '+g.file;
+const revealFile=g=>'文件 '+g.sourceOrder+' · '+(g.displayFile||g.file);
 const titleOf=g=>(Object.hasOwn(policyNames,g.policy)?policyNames[g.policy]:null)||g.label||g.policy||'原生模型';
 const optionName=g=>revealFile(g)+' · '+titleOf(g);
 function putPanel(key){
@@ -150,7 +150,7 @@ async function importFiles(files){
  if(!files.length)return;
  const my=++loadId;
  const fileMax=Math.min(KevTrace.MAX_BYTES||25*1024*1024,25*1024*1024);
- $('pick').disabled=true;
+ $('pick').disabled=true; $('pick-folder').disabled=true; $('open-folder-files').disabled=true;
  importMessage('正在本地读取 '+files.length+' 个文件…');
  try{
   if(files.length>MAX_FILES||files.reduce((sum,f)=>sum+f.size,0)>MAX_TOTAL_BYTES)
@@ -172,7 +172,8 @@ async function importFiles(files){
      throw Error('本次对局数或帧数超过页面上限；请选择更少的结果文件。');
     const group=String(g.seed);
     if(!staged.has(group))staged.set(group,[]);
-    staged.get(group).push({...g,uid:'file-'+i+'-game-'+j,sourceOrder:i+1});
+    const displayFile=f.webkitRelativePath?f.webkitRelativePath.slice(0,300):null;
+    staged.get(group).push({...g,displayFile,uid:'file-'+i+'-game-'+j,sourceOrder:i+1});
    }
   }
   if(my!==loadId)return;
@@ -187,13 +188,67 @@ async function importFiles(files){
  }catch(e){
   if(my===loadId)importMessage(String(e.message||e)+(groups.size?' 已保留上一次成功导入的回放。':''),true);
  }finally{
-  if(my===loadId)$('pick').disabled=false;
+  if(my===loadId){$('pick').disabled=false;$('pick-folder').disabled=false;updateFolderSelection()}
  }
 }
 const drop=$('import-panel'),fileInput=$('file-input');
 $('pick').addEventListener('click',()=>fileInput.click());
 fileInput.addEventListener('change',()=>{
  const files=Array.from(fileInput.files||[]);fileInput.value='';importFiles(files);
+});
+const folderInput=$('folder-input'),pickFolder=$('pick-folder'),openFolder=$('open-folder-files');
+const folderSupported='webkitdirectory' in folderInput;
+const fDate=new Intl.DateTimeFormat('zh-CN',{dateStyle:'short',timeStyle:'short'});
+const fPath=f=>f.webkitRelativePath||f.name||'';
+const MAX_CANDIDATES=120;
+let folderRows=[];
+function likelyTrace(f){
+ const path=fPath(f).replaceAll('\\','/').toLowerCase();
+ const pieces=path.split('/'), name=pieces.at(-1);
+ if(!/\.(jsonl|ndjson)$/.test(name) || /(^|[-_.])(benchmark|bench|summary|progress|timing|metrics|train|dev|loss|report|lock)([-_.]|$)/.test(name))return false;
+ if(/(^|[-_.])(moves?|traces?|replays?|events?|gameplay|games?)([-_.]|$)/.test(name))return true;
+ const stem=name.replace(/\.(jsonl|ndjson)$/,'');
+ if(pieces.slice(0,-1).includes('traces')&&/^(d4|wide|stock|[a-z0-9]+[-_][a-z0-9_-]+)$/.test(stem))return true;
+ return pieces.slice(0,-1).includes('live')&&/^[0-9a-f]{32}$/.test(stem);
+}
+function updateFolderSelection(){
+ const selected=folderRows.filter(x=>x.box.checked);
+ const bytes=selected.reduce((sum,x)=>sum+x.file.size,0);
+ const valid=selected.length<=MAX_FILES&&bytes<=MAX_TOTAL_BYTES;
+ openFolder.disabled=!selected.length||!valid||$('pick').disabled;
+ $('folder-selection').textContent=selected.length
+  ?'已选 '+selected.length+' 个 · '+(bytes/1048576).toFixed(2)+' MiB'+(valid?'':'，最多 '+MAX_FILES+' 个、共 48 MiB')
+  :'未选择';
+}
+function showFolder(files){
+ const matches=Array.from(files).filter(likelyTrace).sort((a,b)=>(b.lastModified||0)-(a.lastModified||0)||fPath(a).localeCompare(fPath(b),'zh-CN',{numeric:true}));
+ const limit=Math.min(KevTrace.MAX_BYTES||16*1024*1024,16*1024*1024);
+ const rows=[];
+ folderRows=matches.slice(0,MAX_CANDIDATES).map(f=>{
+  const wrap=document.createElement('label');wrap.className='folder-choice';
+  const box=document.createElement('input');box.type='checkbox';box.disabled=f.size<1||f.size>limit;
+  const span=document.createElement('span'),path=document.createElement('span'),meta=document.createElement('small');
+  path.className='folder-path';path.textContent=fPath(f).slice(0,300);
+  const time=Number.isFinite(f.lastModified)&&f.lastModified>0&&f.lastModified<=8640000000000000?fDate.format(f.lastModified):'修改时间未记录';
+  meta.className='folder-meta';meta.textContent=(f.size/1048576).toFixed(2)+' MiB · '+time+(box.disabled?' · 文件为空或超出单文件上限':'');
+  span.append(path,meta);wrap.append(box,span);rows.push(wrap);
+  box.addEventListener('change',updateFolderSelection);
+  return {box,file:f};
+ });
+ $('folder-list').replaceChildren(...rows);
+ $('folder-results').hidden=false;
+ $('folder-summary').textContent=matches.length?'找到 '+matches.length+' 个候选，按修改时间从新到旧。'+(matches.length>MAX_CANDIDATES?'只列出前 '+MAX_CANDIDATES+' 个。':'')+'勾选后才读取内容。':'这个文件夹没有找到常见的对局文件名。可以改用「直接选记录文件」。';
+ updateFolderSelection();
+}
+pickFolder.hidden=!folderSupported;$('folder-help').hidden=!folderSupported;
+pickFolder.addEventListener('click',()=>folderInput.click());
+folderInput.addEventListener('change',()=>{
+ const files=Array.from(folderInput.files||[]);
+ folderInput.value='';
+ if(files.length)showFolder(files);
+});
+openFolder.addEventListener('click',()=>{
+ if(!openFolder.disabled)importFiles(folderRows.filter(x=>x.box.checked).map(x=>x.file));
 });
 drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.toggle('dragover',true)});
 drop.addEventListener('dragleave',()=>drop.classList.toggle('dragover',false));

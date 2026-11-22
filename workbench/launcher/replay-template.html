@@ -106,7 +106,19 @@ header .pill{color:#166655;background:#eaf7f2}
 .import-help{font-size:13px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
 .picker{background:var(--indigo);color:white;border:0;border-radius:11px;padding:10px 14px;font-size:14px;font-weight:700;white-space:nowrap}
 .picker:disabled{opacity:.6;cursor:wait}
-#file-input{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+#file-input,#folder-input{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+.import-actions{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.picker.secondary{background:#f0edff;color:#352880}
+.folder-help{margin-top:6px;color:var(--muted);font-size:12px;overflow-wrap:anywhere}
+.folder-results{border-top:1px solid var(--line);margin-top:12px;padding-top:10px}
+.folder-results h3{font-size:15px;margin:0 0 3px}
+.folder-list{display:grid;gap:5px;max-height:260px;overflow:auto;padding:2px 1px}
+.folder-choice{display:grid;grid-template-columns:auto minmax(0,1fr);align-items:start;gap:7px;background:#f5f8fc;border-radius:8px;padding:7px 8px;font-size:13px}
+.folder-choice input{margin:3px 0 0;accent-color:var(--indigo)}
+.folder-path{overflow-wrap:anywhere;font-weight:700}
+.folder-meta{display:block;font-size:11px;color:var(--muted)}
+.folder-footer{display:flex;gap:9px;flex-wrap:wrap;align-items:center;margin-top:8px;color:var(--muted);font-size:12px}
+@media(max-width:600px){.import-grid{grid-template-columns:1fr}.import-actions{justify-content:flex-start}.folder-choice{font-size:12px}}
 #import-panel.dragover{outline:2px solid var(--indigo);outline-offset:3px}
 #import-status{font-size:13px;color:var(--muted);margin-top:9px;overflow-wrap:anywhere}
 #import-status[data-error=true]{color:var(--coral)}
@@ -130,7 +142,16 @@ header .pill{color:#166655;background:#eaf7f2}
 <header><div class="brand"><span class="icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>KEV LAB</div><p class="crumb">模型实验 / 即时回看</p><span class="pill">纯本地 · 不上传</span></header>
 <section class="intro" aria-labelledby="main-title"><div><h1 id="main-title">2048 即时回看</h1><p class="subtitle">选中结果文件，就能回放真实棋局。无需装模型、开服务器或联网。</p></div></section>
 <section class="card" id="import-panel" aria-labelledby="import-title">
-<div class="import-grid"><div><h2 class="import-title" id="import-title">导入本地对局</h2><p class="import-help">选择或拖入一个或多个逐步记录，例如 <code>runs/某次测试/moves.jsonl</code>。<code>benchmark.json</code> 只有摘要，不能回放。</p></div><button type="button" class="picker" id="pick" aria-describedby="import-status">选择结果文件</button><input id="file-input" type="file" accept=".jsonl,.json,application/json,application/x-ndjson" multiple tabindex="-1" aria-label="选择对局文件"></div>
+<div class="import-grid"><div><h2 class="import-title" id="import-title">导入本地对局</h2><p class="import-help">测试后，到项目目录的 <code>runs/某次测试/moves.jsonl</code> 找逐步记录；仓库里的旧实验在 <code>experiments/traces/</code>。<code>benchmark.json</code> 只有摘要，不能回放。</p></div>
+<div class="import-actions"><button type="button" class="picker secondary" id="pick-folder" aria-describedby="folder-help" hidden>先选文件夹</button><button type="button" class="picker" id="pick" aria-describedby="import-status">直接选记录文件</button></div>
+<input id="file-input" type="file" accept=".jsonl,.json,.ndjson,application/json,application/x-ndjson" multiple tabindex="-1" aria-label="选择对局文件">
+<input id="folder-input" type="file" webkitdirectory multiple tabindex="-1" aria-label="选择结果文件夹"></div>
+<p id="folder-help" class="folder-help" hidden>可以先选 <code>runs/</code> 或 <code>experiments/traces/</code>，页面列出其中可能是对局的文件。只读取你勾选的记录。</p>
+<section id="folder-results" class="folder-results" aria-labelledby="folder-heading" hidden>
+<h3 id="folder-heading">此文件夹中的可能对局记录</h3><p id="folder-summary" class="folder-help" role="status"></p>
+<div id="folder-list" class="folder-list"></div>
+<div class="folder-footer"><button type="button" class="picker" id="open-folder-files" disabled>打开所选记录</button><span id="folder-selection">未选择</span></div>
+</section>
 <p id="import-status" role="status">文件只在当前浏览器里读取。可同时选中两次测试的逐步记录。</p>
 </section>
 <section class="card blank" id="empty"><h2>还没有导入棋局</h2><p>选一个文件可播放单局；导入相同种子下的两个版本，可并排比较。</p></section>
