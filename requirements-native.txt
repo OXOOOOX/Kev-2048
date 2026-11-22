@@ -1,0 +1,10 @@
+# Install your platform's PyTorch wheel first (see TRAINING.md).
+# Core versions tested in cloud, independent of Kev's packaging resolver.
+transformers==5.24.0
+peft==0.22.0
+pydantic==2.13.4
+accelerate==1.16.0
+datasets==5.2.0
+numpy==2.3.5
+scikit-learn==1.8.0
+huggingface-hub==2.4.0

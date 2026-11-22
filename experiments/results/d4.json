@@ -1,0 +1,198 @@
+{
+  "status": "completed_gate_failed",
+  "cap_plies": 240,
+  "semantics": "Four same-seed pairs; frozen V2 identity versus all-eight symmetry averaging, no search/fallback, greedy reference.",
+  "rows": 1998,
+  "endpoints": [
+    {
+      "seed": 96626001,
+      "policy": "d4",
+      "turn": 53,
+      "score": 280,
+      "max_tile": 32,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96626001,
+      "policy": "greedy",
+      "turn": 240,
+      "score": 3024,
+      "max_tile": 256,
+      "stop": "capped"
+    },
+    {
+      "seed": 96626001,
+      "policy": "identity",
+      "turn": 178,
+      "score": 1752,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96626002,
+      "policy": "d4",
+      "turn": 97,
+      "score": 820,
+      "max_tile": 64,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96626002,
+      "policy": "greedy",
+      "turn": 240,
+      "score": 2828,
+      "max_tile": 256,
+      "stop": "capped"
+    },
+    {
+      "seed": 96626002,
+      "policy": "identity",
+      "turn": 198,
+      "score": 2296,
+      "max_tile": 256,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96626003,
+      "policy": "d4",
+      "turn": 42,
+      "score": 168,
+      "max_tile": 16,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96626003,
+      "policy": "greedy",
+      "turn": 240,
+      "score": 2792,
+      "max_tile": 256,
+      "stop": "capped"
+    },
+    {
+      "seed": 96626003,
+      "policy": "identity",
+      "turn": 240,
+      "score": 3004,
+      "max_tile": 256,
+      "stop": "capped"
+    },
+    {
+      "seed": 96626004,
+      "policy": "d4",
+      "turn": 97,
+      "score": 696,
+      "max_tile": 64,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96626004,
+      "policy": "greedy",
+      "turn": 240,
+      "score": 2800,
+      "max_tile": 256,
+      "stop": "capped"
+    },
+    {
+      "seed": 96626004,
+      "policy": "identity",
+      "turn": 133,
+      "score": 1264,
+      "max_tile": 128,
+      "stop": "terminal"
+    }
+  ],
+  "thresholds": {
+    "identity": {
+      "n_endpoint": 4,
+      "terminal": 3,
+      "n_capped": 1,
+      "tile_at_least": {
+        "128": 4,
+        "256": 2,
+        "512": 0,
+        "1024": 0,
+        "2048": 0
+      }
+    },
+    "d4": {
+      "n_endpoint": 4,
+      "terminal": 4,
+      "n_capped": 0,
+      "tile_at_least": {
+        "128": 0,
+        "256": 0,
+        "512": 0,
+        "1024": 0,
+        "2048": 0
+      }
+    },
+    "greedy": {
+      "n_endpoint": 4,
+      "terminal": 0,
+      "n_capped": 4,
+      "tile_at_least": {
+        "128": 4,
+        "256": 4,
+        "512": 0,
+        "1024": 0,
+        "2048": 0
+      }
+    }
+  },
+  "paired_endpoints": {
+    "identity": {
+      "n": 4,
+      "d4_wins": 0,
+      "ties": 0,
+      "d4_losses": 4,
+      "raw_d4_minus": [
+        [
+          96626001,
+          -1472
+        ],
+        [
+          96626002,
+          -1476
+        ],
+        [
+          96626003,
+          -2836
+        ],
+        [
+          96626004,
+          -568
+        ]
+      ]
+    },
+    "greedy": {
+      "n": 4,
+      "d4_wins": 0,
+      "ties": 0,
+      "d4_losses": 4,
+      "raw_d4_minus": [
+        [
+          96626001,
+          -2744
+        ],
+        [
+          96626002,
+          -2008
+        ],
+        [
+          96626003,
+          -2624
+        ],
+        [
+          96626004,
+          -2104
+        ]
+      ]
+    }
+  },
+  "median_policy_seconds": {
+    "identity": 0.897124,
+    "d4": 4.792462,
+    "greedy": 1e-05
+  },
+  "pilot_gate_pass": false
+}

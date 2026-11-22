@@ -1,0 +1,197 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>2048 对局回放 · Kev Lab</title>
+<style>
+:root{--ink:#132238;--muted:#526882;--line:#dee6ef;--indigo:#4f46ce;--coral:#ae4132;--shadow:#dce6f2;--card:#fff}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--ink);background:linear-gradient(180deg,#f7faff,#edf3fa);font:16px/1.5 "Segoe UI","Noto Sans CJK SC","Microsoft Yahei","PingFang SC",sans-serif}
+main{width:min(100% - 48px,1312px);margin:auto}
+button,select,input{font:inherit}
+button,select{cursor:pointer}
+:focus-visible{outline:3px solid #7469f4;outline-offset:3px}
+header{min-height:89px;display:flex;align-items:center;border-bottom:1px solid var(--line);gap:20px}
+.brand{display:flex;align-items:center;gap:11px;font:700 16px/1.1 "Segoe UI",sans-serif;letter-spacing:2px;white-space:nowrap}
+.icon{display:grid;grid-template-columns:repeat(2,11px);gap:3px}
+.icon i{width:11px;height:11px;border-radius:3px;background:#5b50e5}
+.icon i:nth-child(2){background:#9b94f4}
+.icon i:nth-child(3){background:#c4befc}
+.crumb{color:var(--muted);font-size:14px;padding-left:16px;border-left:1px solid var(--line)}
+.pill{border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;background:#e9eff8;color:#455a76}
+header .pill{margin-left:auto;white-space:nowrap}
+.intro{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:24px 0 23px}
+h1,h2,p{margin:0}
+h1{font-position:normal;font-size:clamp(28px,4vw,43px);letter-spacing:-.6px;line-height:1.12}
+.subtitle{margin-top:8px;color:var(--muted)}
+.seed{display:block;padding:9px 16px;background:white;border:1px solid var(--line);border-radius:15px;min-width:205px}
+.seed span{display:block;font-size:12px;font-weight:700;color:var(--muted)}
+.seed select{border:0;padding:2px 24px 2px 0;background:transparent;color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums;width:100%}
+.boards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px}
+.panel{--accent:var(--indigo);--tone:#eeecff;min-width:0;border:1px solid var(--line);border-radius:23px;background:var(--card);padding:22px 23px 15px;box-shadow:0 4px 0 var(--shadow)}
+.panel[data-policy="d4"]{--accent:var(--coral);--tone:#fcefea}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:20px}
+.panel h2{font-size:clamp(19px,2.4vw,27px);line-height:1.23;display:flex;align-items:center;gap:8px;overflow-wrap:anywhere}
+.panel h2::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.panel-head p{color:var(--muted);font-size:13px;margin-top:6px}
+.status{color:var(--accent);background:var(--tone);flex-shrink:0;white-space:nowrap}
+.status::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.panel-main{display:grid;grid-template-columns:minmax(0,368fr) minmax(0,202fr);gap:20px;align-items:stretch}
+.board{background:#d3ddeb;border-radius:18px;padding:9px;aspect-ratio:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:6px;overflow:hidden;container-type:inline-size}
+.tile{position:relative;border-radius:10px;display:grid;place-items:center;font-family:"Segoe UI",system-ui,sans-serif;font-size:9.1cqi;font-weight:750;background:#e3eaf2;color:#2d435a;min-width:0;line-height:1}
+.tile.spawn{outline:3px solid var(--accent);outline-offset:-3px}
+.tile.spawn::after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;top:7px;right:7px;background:var(--accent)}
+.tile[data-value="2"]{background:#fafcff}.tile[data-value="4"]{background:#edf0ff;color:#403d8e}.tile[data-value="8"]{background:#d9e4ff;color:#203e7d}.tile[data-value="16"]{background:#a7bff3;color:#192950}.tile[data-value="32"]{background:#5366ad;color:#fff}.tile[data-value="64"]{background:#333580;color:#fff}.tile[data-value="128"]{background:#332c72;color:#fff}.tile[data-value="256"]{background:#292259;color:#fff}
+.stats{display:grid;grid-template-rows:repeat(3,minmax(0,auto));align-content:stretch;gap:5px;background:#f2f6fb;border-radius:15px;padding:15px 16px 12px;min-width:0;margin:0}
+.metric{min-width:0}
+.metric dt{margin:0 0 5px;color:var(--muted);font-size:14px;font-weight:650}
+.metric dd{margin:0;font-family:"Segoe UI","Noto Sans CJK SC","Microsoft Yahei",sans-serif;font-variant-numeric:tabular-nums;line-height:1.1;font-size:clamp(20px,3vw,42px);font-weight:750}
+.metric.move{border-top:1px solid var(--line);padding-top:14px}
+.metric.move dd{background:var(--tone);color:var(--accent);border-radius:10px;padding:10px;font-size:16px;min-height:40px;display:flex;align-items:center;gap:10px}
+.metric.move .arrow{font-size:23px;line-height:1}
+.metric.tile-best dd{font-size:clamp(18px,2.5vw,30px)}
+.panel-foot{border-top:1px solid var(--line);padding-top:13px;margin-top:18px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:3px 10px;font-size:14px;font-weight:700}
+.panel-foot span:first-child{color:var(--muted)}
+.timeline{margin-top:27px;padding:21px 25px 9px;border:1px solid var(--line);border-radius:22px;background:#fff;box-shadow:0 4px 0 var(--shadow)}
+.timeline-main{display:grid;grid-template-columns:245px minmax(0,1fr);gap:34px;align-items:stretch}
+.timeline h2{font-size:21px;line-height:1.2}
+.timeline .hint{margin-top:5px;font-size:13px;color:var(--muted)}
+.controlbar{display:flex;gap:8px;align-items:center;margin-top:15px}
+.controlbar button{width:45px;height:42px;padding:0;background:#f1f5fa;border:0;border-radius:12px;color:var(--ink);font-weight:700;display:grid;place-items:center;flex-shrink:0}
+.controlbar button:disabled{cursor:not-allowed;opacity:.5}
+.controlbar button:not(:disabled):hover{filter:brightness(.95)}
+.controlbar button svg{width:18px;height:18px}
+.controlbar button.play{background:var(--indigo);color:#fff}
+.controlbar select{border:0;background:#f1f5fa;border-radius:10px;padding:7px 6px;font-size:14px;font-weight:700;max-width:68px;color:var(--ink)}
+.track{border-left:1px solid var(--line);padding-left:31px;min-width:0;display:flex;flex-direction:column;justify-content:space-between}
+.track-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.track-top label{font-size:14px;font-weight:700;color:var(--muted)}
+#turn-output{font-size:17px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+input[type="range"]{appearance:none;width:100%;margin:0;background:transparent;height:30px;cursor:pointer;accent-color:var(--indigo)}
+input[type="range"]::-webkit-slider-runnable-track{height:7px;border-radius:15px;background:linear-gradient(to right,var(--indigo) 0 var(--position,0%),#dce6f1 var(--position,0%) 100%)}
+input[type="range"]::-webkit-slider-thumb{appearance:none;border:3px solid var(--indigo);background:#fff;width:19px;height:19px;border-radius:50%;margin-top:-6px}
+input[type="range"]::-moz-range-track{height:7px;border-radius:15px;background:linear-gradient(to right,var(--indigo) 0 var(--position,0%),#dce6f1 var(--position,0%) 100%)}
+input[type="range"]::-moz-range-thumb{border:3px solid var(--indigo);background:#fff;width:15px;height:15px;border-radius:50%}
+.track-range{margin:26px 6px 0;position:relative}
+.tick{position:absolute;top:26px;transform:translateX(-50%);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.end-marker{position:absolute;bottom:27px;transform:translateX(-50%);border:0;color:var(--coral);background:#fcefea;font-size:11px;font-weight:700;padding:4px 7px;border-radius:9px;white-space:nowrap}
+.end-marker[hidden]{display:none}
+.jumps{display:flex;gap:7px;flex-wrap:wrap;font-size:12px;margin-top:23px;padding-bottom:3px}
+.jumps button{border:1px solid var(--line);padding:4px 8px;border-radius:8px;background:white;color:var(--muted)}
+.jumps button:hover{border-color:var(--indigo);color:var(--indigo)}
+.legend{margin-top:13px;padding-top:9px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
+.legend i{display:inline-block;width:12px;height:12px;border:2px solid var(--indigo);border-radius:3px;vertical-align:-2px;margin-right:6px}
+.page-foot{padding:20px 0;display:flex;gap:10px;justify-content:space-between;color:var(--muted);font-size:12px}
+.page-foot strong{letter-spacing:1.25px;white-space:nowrap}
+@media(max-width:1060px){.boards{gap:18px}.panel{padding:17px}.panel-main{gap:11px}.stats{padding:10px}.metric dt{font-size:12px}.metric.move{padding-top:8px}.metric.move dd{min-height:34px;padding:6px;font-size:14px}}
+@media(max-width:800px){main{width:calc(100% - 32px)}header{min-height:58px}.intro{padding:19px 0}.panel-main{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;gap:6px;padding:10px;align-items:start}.metric.move{border:0;padding:0}.metric.move dd{min-height:0;padding:3px 4px;gap:4px;white-space:nowrap}.metric.move .arrow{font-size:17px}.metric dt{margin-bottom:4px}.board{max-width:100%}.timeline-main{grid-template-columns:1fr;gap:15px}.track{border-left:0;border-top:1px solid var(--line);padding:12px 0 0}}
+@media(max-width:520px){main{width:calc(100% - 22px)}header{gap:9px;min-height:49px}.brand{font-size:12px;letter-spacing:1.2px;gap:6px}.icon{grid-template-columns:repeat(2,8px);gap:2px}.icon i{width:8px;height:8px;border-radius:2px}.crumb{font-size:11px;padding-left:7px}.pill{font-size:11px;padding:4px 6px}.status::before{width:5px;height:5px;margin-right:3px}.intro{display:block;padding:14px 0}.subtitle{font-size:13px;margin-top:5px}.seed{margin-top:9px;padding:3px 7px;min-width:0;display:inline-flex;gap:5px;align-items:center}.seed span{font-size:10px}.seed select{padding:2px;font-size:12px;width:auto}.boards{gap:8px}.panel{padding:9px 6px 8px;border-radius:12px}.panel-head{display:block;margin-bottom:6px}.panel h2{font-size:15px;gap:5px}.panel h2::before{width:6px;height:6px}.panel-head p{display:none}.status{display:inline-block;margin-top:4px}.panel-main{gap:5px}.board{padding:4px;gap:3px;border-radius:9px}.tile{border-radius:5px;font-size:11.7cqi}.tile.spawn{outline-width:2px;outline-offset:-2px}.tile.spawn::after{width:4px;height:4px;top:4px;right:4px}.stats{padding:5px 4px;gap:3px;border-radius:7px}.metric dt{font-size:10px;line-height:1.12;margin-bottom:5px;min-height:22px}.metric dd,.metric.tile-best dd{font-size:17px}.metric.move dd{font-size:10px;padding:3px 2px;gap:1px}.metric.move .arrow{font-size:12px}.panel-foot{display:block;margin-top:6px;padding-top:6px;font-size:10px}.panel-foot span:first-child{display:block}.timeline{margin-top:12px;padding:11px 10px 7px;border-radius:12px}.timeline h2{font-size:17px}.timeline .hint{font-size:11px}.timeline-main{gap:8px}.controlbar{margin-top:8px}.controlbar button{width:44px;height:44px}.track{padding-top:7px}.track-top label,.jumps{font-size:11px}#turn-output{font-size:14px}.track-range{margin:24px 7px 0}.legend{margin-top:7px;font-size:10px}.legend .shortcuts{display:none}.page-foot{font-size:9px;padding:10px 0}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main>
+<header><div class="brand"><span class="icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>KEV LAB</div><p class="crumb">模型实验 / 对局回放</p><span class="pill">离线交互回放</span></header>
+<section class="intro" aria-labelledby="main-title">
+<div><h1 id="main-title">2048 对局回放</h1><p class="subtitle">同一个开局，并排比较两套策略的每一步。</p></div>
+<label class="seed"><span>同一起局种子</span><select id="seed" aria-label="对局种子"></select></label>
+</section>
+<section class="boards" aria-label="对局棋盘">
+<article class="panel" data-policy="identity">
+<div class="panel-head"><div><h2>原版 V2</h2><p>原始棋盘直接判断</p></div><span class="pill status"></span></div>
+<div class="panel-main">
+<div class="board" role="img"></div>
+<dl class="stats"><div class="metric"><dt class="score-label"></dt><dd class="score"></dd></div><div class="metric move"><dt class="move-label"></dt><dd><span class="arrow" aria-hidden="true"></span><span class="move-name"></span></dd></div><div class="metric tile-best"><dt>最大方块</dt><dd class="best"></dd></div></dl>
+</div><div class="panel-foot"><span>完整对局</span><span class="final"></span></div>
+</article>
+<article class="panel" data-policy="d4">
+<div class="panel-head"><div><h2>八方向投票</h2><p>旋转与镜像后合并模型判断</p></div><span class="pill status"></span></div>
+<div class="panel-main">
+<div class="board" role="img"></div>
+<dl class="stats"><div class="metric"><dt class="score-label"></dt><dd class="score"></dd></div><div class="metric move"><dt class="move-label"></dt><dd><span class="arrow" aria-hidden="true"></span><span class="move-name"></span></dd></div><div class="metric tile-best"><dt>最大方块</dt><dd class="best"></dd></div></dl>
+</div><div class="panel-foot"><span>完整对局</span><span class="final"></span></div>
+</article>
+</section>
+<section class="timeline" aria-labelledby="timeline-title">
+<div class="timeline-main">
+<div><h2 id="timeline-title">同步时间轴</h2><p class="hint">两面棋盘锁定在同一步</p>
+<div class="controlbar">
+<button type="button" id="prev" aria-label="上一步" title="上一步（←）"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+<button type="button" class="play" id="play" aria-label="播放" title="播放或暂停（空格）"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l14 8-14 8z"/></svg></button>
+<button type="button" id="next" aria-label="下一步" title="下一步（→）"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+<select id="speed" aria-label="播放速度"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+</div></div>
+<div class="track"><div class="track-top"><label for="seek">按步回放</label><output id="turn-output" for="seek"></output></div>
+<div class="track-range"><button type="button" class="end-marker" id="marker"></button><input type="range" id="seek" min="0" max="178" step="1" value="53"><div id="ticks" aria-hidden="true"></div></div>
+<div class="jumps"><button type="button" id="jump-start">回到开局</button><button type="button" id="jump-divergence"></button><button type="button" id="jump-end">跳到最后</button></div></div>
+</div>
+<div class="legend"><span><i aria-hidden="true"></i>描边表示本步新生成的方块；两局后续落点可不同。</span><span class="shortcuts">← / → 移步 · 空格播放或暂停</span></div>
+</section>
+<footer class="page-foot"><span>记录来源：云端实测 · 两套策略独立选择动作 · 无搜索代打</span><strong>KEV / 2048</strong></footer>
+<noscript>要播放对局，请在浏览器中启用 JavaScript。回放文件无需联网。</noscript>
+</main>
+<script>
+'use strict';
+const matches = /*__SERIALIZED_DATA__*/;
+const $ = (q, root=document)=>root.querySelector(q);
+const seedSelect=$('#seed'), seek=$('#seek'), play=$('#play'), prev=$('#prev'), next=$('#next'), speed=$('#speed'), marker=$('#marker');
+const turnText=$('#turn-output'), ticks=$('#ticks'), divergence=$('#jump-divergence');
+const names={up:['↑','向上'],down:['↓','向下'],left:['←','向左'],right:['→','向右']};
+const fmt=new Intl.NumberFormat('zh-CN');
+let match=matches[0], turn=53, maxTurn=0, timer=null, playing=false;
+const panels={};
+for(const p of document.querySelectorAll('.panel')){
+ const cells=Array.from({length:16},()=>{
+   const t=document.createElement('div');t.className='tile';t.setAttribute('aria-hidden','true');$('.board',p).append(t);return t;
+ });
+ panels[p.dataset.policy]={nodes:[...cells],board:$('.board',p),title:$('h2',p).textContent,status:$('.status',p),scoreLabel:$('.score-label',p),score:$('.score',p),moveLabel:$('.move-label',p),move:$('.move-name',p),arrow:$('.arrow',p),best:$('.best',p),final:$('.final',p)};
+}
+for(const sample of matches){const option=document.createElement('option'); option.value=sample.seed;option.textContent=sample.seed;seedSelect.append(option)}
+function putPanel(key){
+ const rec=match[key], refs=panels[key], end=rec.frames.length, shown=Math.min(turn,end), frozen=turn>end;
+ const [board,score,action,spawn]=shown?rec.frames[shown-1]:[match.start,0,null,-1];
+ for(let i=0;i<16;i++){const tile=refs.nodes[i];tile.dataset.value=board[i];tile.textContent=board[i]||''; const fresh=i===spawn&&!frozen;tile.classList.toggle('spawn',fresh); if(fresh)tile.title='本步新方块：第 '+(Math.floor(i/4)+1)+' 行，第 '+(i%4+1)+' 列'; else tile.removeAttribute('title')}
+ const rows=[];for(let i=0;i<16;i+=4)rows.push(board.slice(i,i+4).map(x=>x||'空').join('、'));
+ refs.board.setAttribute('aria-label',refs.title+'棋盘：'+rows.join('；')+(spawn>=0&&!frozen?'。新方块在第 '+(Math.floor(spawn/4)+1)+' 行第 '+(spawn%4+1)+' 列':''));
+ refs.status.textContent=!turn?'同一开局':shown<end?'还可继续':rec.end==='terminal'?'已结束':'到达上限';
+ refs.scoreLabel.textContent=!shown?'开局得分':'第 '+shown+' 步后得分';refs.score.textContent=fmt.format(score);
+ refs.moveLabel.textContent=frozen?'本步动作':action?'本步动作':'开局状态';
+ refs.arrow.textContent=!frozen&&action?names[action][0]:'';
+ refs.move.textContent=frozen?'无新动作':action?names[action][1]:'还未移动';
+ refs.best.textContent=Math.max(...board);
+ const final=fmt.format(rec.frames[end-1][1]);refs.final.textContent='最终 '+final+' 分 · 第 '+end+' 步'+(rec.end==='terminal'?'自然结束':'达到记录上限');
+}
+function draw(){for(const k of Object.keys(panels))putPanel(k);seek.value=turn;seek.setAttribute('aria-valuetext','第 '+turn+' / '+maxTurn+' 步');seek.style.setProperty('--position',(100*turn/maxTurn)+'%');turnText.textContent='第 '+turn+' / '+maxTurn+' 步';prev.disabled=turn<=0;next.disabled=turn>=maxTurn}
+function refreshPlay(){play.setAttribute('aria-label',playing?'暂停':'播放');play.innerHTML=playing?'<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>':'<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l14 8-14 8z"/></svg>'}
+function stop(){clearTimeout(timer);timer=null;playing=false;refreshPlay()}
+function setTurn(t, cancel=true){if(cancel)stop(); turn=Math.min(maxTurn,Math.max(0,Number(t)));draw()}
+function stepPlayback(){clearTimeout(timer);if(!playing)return;if(turn>=maxTurn){stop();return}timer=setTimeout(()=>{setTurn(turn+1,false);stepPlayback()},650/Number(speed.value))}
+function toggle(){if(playing){stop();return}if(turn>=maxTurn)setTurn(0,false);playing=true;refreshPlay();stepPlayback()}
+function setMatch(selected, initial=false){
+ stop();match=selected;maxTurn=Math.max(match.identity.frames.length,match.d4.frames.length);seek.max=maxTurn;
+ const marks=[0,Math.round(maxTurn/4),Math.round(maxTurn/2),Math.round(maxTurn*3/4),maxTurn];
+ ticks.replaceChildren(...marks.map(t=>{const e=document.createElement('span');e.className='tick';e.style.left=(100*t/maxTurn)+'%';e.textContent=t;return e}));
+ const dEnd=match.d4.frames.length;
+ marker.hidden=dEnd>=maxTurn;
+ marker.style.left=(100*dEnd/maxTurn)+'%';marker.textContent=match.d4.end==='terminal'?'投票版终局':'投票版截断';marker.onclick=()=>setTurn(dEnd);
+ divergence.hidden=!match.divergence;divergence.textContent='首次分岔 · 第 '+match.divergence+' 步';
+ setTurn(initial&&match.seed===96626001?53:0,false)
+}
+seedSelect.addEventListener('change',()=>setMatch(matches.find(x=>String(x.seed)===seedSelect.value)));
+seek.addEventListener('input',()=>setTurn(seek.value));
+prev.addEventListener('click',()=>setTurn(turn-1));next.addEventListener('click',()=>setTurn(turn+1));
+play.addEventListener('click',toggle);speed.addEventListener('change',stepPlayback);
+$('#jump-start').addEventListener('click',()=>setTurn(0));$('#jump-end').addEventListener('click',()=>setTurn(maxTurn));
+divergence.addEventListener('click',()=>setTurn(match.divergence));
+document.addEventListener('keydown',e=>{
+ if(e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||e.target instanceof HTMLElement&&/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(e.target.tagName))return;
+ if(e.key==='ArrowLeft'){e.preventDefault();setTurn(turn-1)}
+ else if(e.key==='ArrowRight'){e.preventDefault();setTurn(turn+1)}
+ else if(e.key===' '){e.preventDefault();toggle()}
+});
+setMatch(matches[0],true);
+</script>
+</body>
+</html>

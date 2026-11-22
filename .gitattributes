@@ -1,0 +1,4 @@
+# Preserve tracked fixture checksums across Windows and Linux checkouts.
+*.json text eol=lf
+*.jsonl text eol=lf
+*.html text eol=lf

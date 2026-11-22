@@ -1,0 +1,251 @@
+{
+  "loss_diagnostic": {
+    "status": "completed_recurrence_gate_failed",
+    "audit": {
+      "boards": 240,
+      "paired_streams": 4928,
+      "all_means_recomputed": 154,
+      "paired_streams_independently_replayed": 548
+    },
+    "late_teacher_first_move_horizon_8": {
+      "alive": 0.07194767441860465,
+      "score": 61.406976744186046,
+      "undos": 0.7434593023255814
+    },
+    "note": "Paired simulation under greedy continuation; positive late aggregate was also observed on a previously winning game, so not a diagnostic of specific losses."
+  },
+  "v4_targeted_copy": {
+    "status": "completed_dev_gate_failed_no_gameplay",
+    "pre_train_data_audit": {
+      "attempts": 396,
+      "eligible": 49,
+      "stage_counts": {
+        "crowded": 26,
+        "mid": 18,
+        "open": 5
+      },
+      "unique_seeds": 33,
+      "n_v2_visited": 41
+    },
+    "training": {
+      "new_teacher_boards": 49,
+      "archived_replay_boards": 49,
+      "epochs": 2,
+      "epoch_mean_training_loss": [
+        1.2615587881633215,
+        1.1933085066931588
+      ]
+    },
+    "dev": {
+      "v2": {
+        "overall": {
+          "n": 48,
+          "hits": 18,
+          "exact_hits": 18,
+          "mean_teacher_gap": 3950.546875
+        },
+        "by_stage": {
+          "open": {
+            "n": 16,
+            "hits": 4,
+            "exact_hits": 4,
+            "mean_teacher_gap": 1590.8203125
+          },
+          "mid": {
+            "n": 16,
+            "hits": 8,
+            "exact_hits": 8,
+            "mean_teacher_gap": 1444.9921875
+          },
+          "crowded": {
+            "n": 16,
+            "hits": 6,
+            "exact_hits": 6,
+            "mean_teacher_gap": 8815.828125
+          }
+        }
+      },
+      "v4": {
+        "overall": {
+          "n": 48,
+          "hits": 15,
+          "exact_hits": 15,
+          "mean_teacher_gap": 4636.372395833333
+        },
+        "by_stage": {
+          "open": {
+            "n": 16,
+            "hits": 4,
+            "exact_hits": 4,
+            "mean_teacher_gap": 1531.53125
+          },
+          "mid": {
+            "n": 16,
+            "hits": 7,
+            "exact_hits": 7,
+            "mean_teacher_gap": 5031.6953125
+          },
+          "crowded": {
+            "n": 16,
+            "hits": 4,
+            "exact_hits": 4,
+            "mean_teacher_gap": 7345.890625
+          }
+        }
+      }
+    }
+  },
+  "d4_board_check": {
+    "status": "completed_dev_gate_pass_only",
+    "overall": {
+      "n": 48,
+      "plain_hit": 19,
+      "ensemble_hit": 23,
+      "plain_exact": 19,
+      "ensemble_exact": 23,
+      "plain_mean_gap": 4327.575520833333,
+      "ensemble_mean_gap": 3527.7630208333335,
+      "improved": 13,
+      "regressed": 9,
+      "same_direction": 19
+    },
+    "stages": {
+      "open": {
+        "n": 16,
+        "plain_hit": 7,
+        "ensemble_hit": 7,
+        "plain_exact": 7,
+        "ensemble_exact": 7,
+        "plain_mean_gap": 479.7734375,
+        "ensemble_mean_gap": 432.28125,
+        "improved": 2,
+        "regressed": 2,
+        "same_direction": 7
+      },
+      "mid": {
+        "n": 16,
+        "plain_hit": 7,
+        "ensemble_hit": 8,
+        "plain_exact": 7,
+        "ensemble_exact": 8,
+        "plain_mean_gap": 3440.5078125,
+        "ensemble_mean_gap": 4564.6796875,
+        "improved": 5,
+        "regressed": 4,
+        "same_direction": 6
+      },
+      "crowded": {
+        "n": 16,
+        "plain_hit": 5,
+        "ensemble_hit": 8,
+        "plain_exact": 5,
+        "ensemble_exact": 8,
+        "plain_mean_gap": 9062.4453125,
+        "ensemble_mean_gap": 5586.328125,
+        "improved": 6,
+        "regressed": 3,
+        "same_direction": 6
+      }
+    },
+    "cloud_cpu_median_plain_seconds": 0.9189903765000054,
+    "cloud_cpu_median_ensemble_seconds": 4.74760998350007
+  },
+  "stock_scale_dev": {
+    "status": "completed_dev_gate_pass_gameplay_gate_failed_see_stock",
+    "train_boards": 512,
+    "dev_boards": 128,
+    "epochs": 2,
+    "metrics": {
+      "overall": {
+        "n": 128,
+        "improved": 18,
+        "regressed": 7,
+        "v2": {
+          "best_hits": 43,
+          "exact_hits": 43,
+          "raw_mean_regret": 10556.4208984375
+        },
+        "candidate": {
+          "best_hits": 54,
+          "exact_hits": 54,
+          "raw_mean_regret": 4709.4658203125
+        }
+      },
+      "crowded": {
+        "n": 64,
+        "improved": 10,
+        "regressed": 5,
+        "v2": {
+          "best_hits": 21,
+          "exact_hits": 21,
+          "raw_mean_regret": 11685.3515625
+        },
+        "candidate": {
+          "best_hits": 26,
+          "exact_hits": 26,
+          "raw_mean_regret": 4531.693359375
+        }
+      },
+      "early": {
+        "n": 32,
+        "improved": 6,
+        "regressed": 1,
+        "v2": {
+          "best_hits": 6,
+          "exact_hits": 6,
+          "raw_mean_regret": 6951.66796875
+        },
+        "candidate": {
+          "best_hits": 11,
+          "exact_hits": 11,
+          "raw_mean_regret": 4354.03515625
+        }
+      },
+      "middle": {
+        "n": 32,
+        "improved": 2,
+        "regressed": 3,
+        "v2": {
+          "best_hits": 15,
+          "exact_hits": 15,
+          "raw_mean_regret": 3473.51953125
+        },
+        "candidate": {
+          "best_hits": 14,
+          "exact_hits": 14,
+          "raw_mean_regret": 4300.09765625
+        }
+      },
+      "tile512": {
+        "n": 32,
+        "improved": 3,
+        "regressed": 1,
+        "v2": {
+          "best_hits": 11,
+          "exact_hits": 11,
+          "raw_mean_regret": 4492.96484375
+        },
+        "candidate": {
+          "best_hits": 13,
+          "exact_hits": 13,
+          "raw_mean_regret": 3136.98046875
+        }
+      },
+      "late_ood": {
+        "n": 32,
+        "improved": 7,
+        "regressed": 2,
+        "v2": {
+          "best_hits": 11,
+          "exact_hits": 11,
+          "raw_mean_regret": 27307.53125
+        },
+        "candidate": {
+          "best_hits": 16,
+          "exact_hits": 16,
+          "raw_mean_regret": 7046.75
+        }
+      }
+    }
+  }
+}

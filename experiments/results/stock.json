@@ -1,0 +1,868 @@
+{
+  "status": "completed_gameplay_gate_failed",
+  "cap_plies": 400,
+  "semantics": "Frozen native V2 vs a candidate head trained on 512 boards, plus greedy. No search/fallback for either native arm. All 8 native games ended naturally; 3 of 4 reference greedy runs reached the cap.",
+  "board_teacher_matches": {
+    "v2": 43,
+    "candidate": 54,
+    "denominator": 128
+  },
+  "rows": 3236,
+  "endpoints": [
+    {
+      "seed": 96629001,
+      "policy": "candidate",
+      "turn": 158,
+      "score": 1584,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96629001,
+      "policy": "greedy",
+      "turn": 340,
+      "score": 4172,
+      "max_tile": 256,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96629001,
+      "policy": "v2",
+      "turn": 173,
+      "score": 1728,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96629002,
+      "policy": "candidate",
+      "turn": 197,
+      "score": 2292,
+      "max_tile": 256,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96629002,
+      "policy": "greedy",
+      "turn": 400,
+      "score": 5716,
+      "max_tile": 512,
+      "stop": "capped"
+    },
+    {
+      "seed": 96629002,
+      "policy": "v2",
+      "turn": 201,
+      "score": 2380,
+      "max_tile": 256,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96629003,
+      "policy": "candidate",
+      "turn": 204,
+      "score": 1944,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96629003,
+      "policy": "greedy",
+      "turn": 400,
+      "score": 5652,
+      "max_tile": 512,
+      "stop": "capped"
+    },
+    {
+      "seed": 96629003,
+      "policy": "v2",
+      "turn": 301,
+      "score": 4364,
+      "max_tile": 512,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96629004,
+      "policy": "candidate",
+      "turn": 170,
+      "score": 1688,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 96629004,
+      "policy": "greedy",
+      "turn": 400,
+      "score": 5760,
+      "max_tile": 512,
+      "stop": "capped"
+    },
+    {
+      "seed": 96629004,
+      "policy": "v2",
+      "turn": 292,
+      "score": 3876,
+      "max_tile": 256,
+      "stop": "terminal"
+    }
+  ],
+  "metrics": {
+    "candidate": {
+      "median_score": 1816.0,
+      "runs": 4,
+      "natural_ends": 4,
+      "capped": 0,
+      "at_least_512": 0
+    },
+    "v2": {
+      "median_score": 3128.0,
+      "runs": 4,
+      "natural_ends": 4,
+      "capped": 0,
+      "at_least_512": 1
+    },
+    "greedy": {
+      "median_score": 5684.0,
+      "runs": 4,
+      "natural_ends": 1,
+      "capped": 3,
+      "at_least_512": 3
+    }
+  },
+  "candidate_v2_endpoint_score": {
+    "wins": 0,
+    "ties": 0,
+    "losses": 4,
+    "per_seed_candidate_minus_v2": [
+      [
+        96629001,
+        -144
+      ],
+      [
+        96629002,
+        -88
+      ],
+      [
+        96629003,
+        -2420
+      ],
+      [
+        96629004,
+        -2188
+      ]
+    ]
+  },
+  "pair_equal_actual_plies": {
+    "96629001": {
+      "v2": {
+        "horizon": 158,
+        "baseline": {
+          "score": 1608,
+          "tile": 128,
+          "turn": 158,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1584,
+          "tile": 128,
+          "turn": 158,
+          "terminal": true,
+          "status": "terminal"
+        }
+      },
+      "greedy": {
+        "horizon": 158,
+        "baseline": {
+          "score": 1616,
+          "tile": 128,
+          "turn": 158,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1584,
+          "tile": 128,
+          "turn": 158,
+          "terminal": true,
+          "status": "terminal"
+        }
+      }
+    },
+    "96629002": {
+      "v2": {
+        "horizon": 197,
+        "baseline": {
+          "score": 2344,
+          "tile": 256,
+          "turn": 197,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 2292,
+          "tile": 256,
+          "turn": 197,
+          "terminal": true,
+          "status": "terminal"
+        }
+      },
+      "greedy": {
+        "horizon": 197,
+        "baseline": {
+          "score": 1916,
+          "tile": 128,
+          "turn": 197,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 2292,
+          "tile": 256,
+          "turn": 197,
+          "terminal": true,
+          "status": "terminal"
+        }
+      }
+    },
+    "96629003": {
+      "v2": {
+        "horizon": 204,
+        "baseline": {
+          "score": 2424,
+          "tile": 256,
+          "turn": 204,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1944,
+          "tile": 128,
+          "turn": 204,
+          "terminal": true,
+          "status": "terminal"
+        }
+      },
+      "greedy": {
+        "horizon": 204,
+        "baseline": {
+          "score": 2388,
+          "tile": 256,
+          "turn": 204,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1944,
+          "tile": 128,
+          "turn": 204,
+          "terminal": true,
+          "status": "terminal"
+        }
+      }
+    },
+    "96629004": {
+      "v2": {
+        "horizon": 170,
+        "baseline": {
+          "score": 1848,
+          "tile": 128,
+          "turn": 170,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1688,
+          "tile": 128,
+          "turn": 170,
+          "terminal": true,
+          "status": "terminal"
+        }
+      },
+      "greedy": {
+        "horizon": 170,
+        "baseline": {
+          "score": 1740,
+          "tile": 128,
+          "turn": 170,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1688,
+          "tile": 128,
+          "turn": 170,
+          "terminal": true,
+          "status": "terminal"
+        }
+      }
+    }
+  },
+  "same_allowance": {
+    "25": {
+      "96629001": {
+        "v2": {
+          "score": 104,
+          "tile": 16,
+          "turn": 25,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 108,
+          "tile": 16,
+          "turn": 25,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 108,
+          "tile": 16,
+          "turn": 25,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629002": {
+        "v2": {
+          "score": 60,
+          "tile": 8,
+          "turn": 25,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 68,
+          "tile": 8,
+          "turn": 25,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 108,
+          "tile": 16,
+          "turn": 25,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629003": {
+        "v2": {
+          "score": 104,
+          "tile": 16,
+          "turn": 25,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 76,
+          "tile": 8,
+          "turn": 25,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 148,
+          "tile": 32,
+          "turn": 25,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629004": {
+        "v2": {
+          "score": 76,
+          "tile": 8,
+          "turn": 25,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 88,
+          "tile": 16,
+          "turn": 25,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 152,
+          "tile": 32,
+          "turn": 25,
+          "terminal": false,
+          "status": "running"
+        }
+      }
+    },
+    "50": {
+      "96629001": {
+        "v2": {
+          "score": 280,
+          "tile": 32,
+          "turn": 50,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 328,
+          "tile": 32,
+          "turn": 50,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 444,
+          "tile": 64,
+          "turn": 50,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629002": {
+        "v2": {
+          "score": 316,
+          "tile": 32,
+          "turn": 50,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 304,
+          "tile": 32,
+          "turn": 50,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 400,
+          "tile": 64,
+          "turn": 50,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629003": {
+        "v2": {
+          "score": 292,
+          "tile": 32,
+          "turn": 50,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 264,
+          "tile": 32,
+          "turn": 50,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 304,
+          "tile": 32,
+          "turn": 50,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629004": {
+        "v2": {
+          "score": 388,
+          "tile": 64,
+          "turn": 50,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 276,
+          "tile": 32,
+          "turn": 50,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 392,
+          "tile": 64,
+          "turn": 50,
+          "terminal": false,
+          "status": "running"
+        }
+      }
+    },
+    "100": {
+      "96629001": {
+        "v2": {
+          "score": 776,
+          "tile": 64,
+          "turn": 100,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 964,
+          "tile": 128,
+          "turn": 100,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 1044,
+          "tile": 128,
+          "turn": 100,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629002": {
+        "v2": {
+          "score": 804,
+          "tile": 64,
+          "turn": 100,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1016,
+          "tile": 128,
+          "turn": 100,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 996,
+          "tile": 128,
+          "turn": 100,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629003": {
+        "v2": {
+          "score": 752,
+          "tile": 64,
+          "turn": 100,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 968,
+          "tile": 128,
+          "turn": 100,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 984,
+          "tile": 128,
+          "turn": 100,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629004": {
+        "v2": {
+          "score": 776,
+          "tile": 64,
+          "turn": 100,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 988,
+          "tile": 128,
+          "turn": 100,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 988,
+          "tile": 128,
+          "turn": 100,
+          "terminal": false,
+          "status": "running"
+        }
+      }
+    },
+    "150": {
+      "96629001": {
+        "v2": {
+          "score": 1556,
+          "tile": 128,
+          "turn": 150,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1492,
+          "tile": 128,
+          "turn": 150,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 1576,
+          "tile": 128,
+          "turn": 150,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629002": {
+        "v2": {
+          "score": 1448,
+          "tile": 128,
+          "turn": 150,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1480,
+          "tile": 128,
+          "turn": 150,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 1552,
+          "tile": 128,
+          "turn": 150,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629003": {
+        "v2": {
+          "score": 1932,
+          "tile": 256,
+          "turn": 150,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1516,
+          "tile": 128,
+          "turn": 150,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 1892,
+          "tile": 256,
+          "turn": 150,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629004": {
+        "v2": {
+          "score": 1560,
+          "tile": 128,
+          "turn": 150,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1464,
+          "tile": 128,
+          "turn": 150,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 1564,
+          "tile": 128,
+          "turn": 150,
+          "terminal": false,
+          "status": "running"
+        }
+      }
+    },
+    "200": {
+      "96629001": {
+        "v2": {
+          "score": 1728,
+          "tile": 128,
+          "turn": 173,
+          "terminal": true,
+          "status": "terminal"
+        },
+        "candidate": {
+          "score": 1584,
+          "tile": 128,
+          "turn": 158,
+          "terminal": true,
+          "status": "terminal"
+        },
+        "greedy": {
+          "score": 2424,
+          "tile": 256,
+          "turn": 200,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629002": {
+        "v2": {
+          "score": 2372,
+          "tile": 256,
+          "turn": 200,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 2292,
+          "tile": 256,
+          "turn": 197,
+          "terminal": true,
+          "status": "terminal"
+        },
+        "greedy": {
+          "score": 1952,
+          "tile": 128,
+          "turn": 200,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629003": {
+        "v2": {
+          "score": 2408,
+          "tile": 256,
+          "turn": 200,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1928,
+          "tile": 128,
+          "turn": 200,
+          "terminal": false,
+          "status": "running"
+        },
+        "greedy": {
+          "score": 2368,
+          "tile": 256,
+          "turn": 200,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629004": {
+        "v2": {
+          "score": 2592,
+          "tile": 256,
+          "turn": 200,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1688,
+          "tile": 128,
+          "turn": 170,
+          "terminal": true,
+          "status": "terminal"
+        },
+        "greedy": {
+          "score": 2668,
+          "tile": 256,
+          "turn": 200,
+          "terminal": false,
+          "status": "running"
+        }
+      }
+    },
+    "240": {
+      "96629001": {
+        "v2": {
+          "score": 1728,
+          "tile": 128,
+          "turn": 173,
+          "terminal": true,
+          "status": "terminal"
+        },
+        "candidate": {
+          "score": 1584,
+          "tile": 128,
+          "turn": 158,
+          "terminal": true,
+          "status": "terminal"
+        },
+        "greedy": {
+          "score": 3044,
+          "tile": 256,
+          "turn": 240,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629002": {
+        "v2": {
+          "score": 2380,
+          "tile": 256,
+          "turn": 201,
+          "terminal": true,
+          "status": "terminal"
+        },
+        "candidate": {
+          "score": 2292,
+          "tile": 256,
+          "turn": 197,
+          "terminal": true,
+          "status": "terminal"
+        },
+        "greedy": {
+          "score": 2956,
+          "tile": 256,
+          "turn": 240,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629003": {
+        "v2": {
+          "score": 2888,
+          "tile": 256,
+          "turn": 240,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1944,
+          "tile": 128,
+          "turn": 204,
+          "terminal": true,
+          "status": "terminal"
+        },
+        "greedy": {
+          "score": 2960,
+          "tile": 256,
+          "turn": 240,
+          "terminal": false,
+          "status": "running"
+        }
+      },
+      "96629004": {
+        "v2": {
+          "score": 3056,
+          "tile": 256,
+          "turn": 240,
+          "terminal": false,
+          "status": "running"
+        },
+        "candidate": {
+          "score": 1688,
+          "tile": 128,
+          "turn": 170,
+          "terminal": true,
+          "status": "terminal"
+        },
+        "greedy": {
+          "score": 3028,
+          "tile": 256,
+          "turn": 240,
+          "terminal": false,
+          "status": "running"
+        }
+      }
+    }
+  },
+  "pilot_gate_pass": false
+}

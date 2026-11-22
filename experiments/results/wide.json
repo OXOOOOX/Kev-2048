@@ -1,0 +1,436 @@
+{
+  "status": "completed_no_stable_improvement",
+  "cap_plies": 400,
+  "semantics": "Ten matched seeds, both native arms; all 20 games ended naturally. Scores versus greedy use each native arm’s same move allowance (or earlier greedy termination).",
+  "rows": 3695,
+  "endpoints": [
+    {
+      "seed": 95527001,
+      "policy": "hard",
+      "turn": 228,
+      "score": 2444,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527001,
+      "policy": "v2",
+      "turn": 198,
+      "score": 2356,
+      "max_tile": 256,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527002,
+      "policy": "hard",
+      "turn": 101,
+      "score": 756,
+      "max_tile": 64,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527002,
+      "policy": "v2",
+      "turn": 222,
+      "score": 2376,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527003,
+      "policy": "hard",
+      "turn": 219,
+      "score": 2612,
+      "max_tile": 256,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527003,
+      "policy": "v2",
+      "turn": 150,
+      "score": 1428,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527004,
+      "policy": "hard",
+      "turn": 227,
+      "score": 2636,
+      "max_tile": 256,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527004,
+      "policy": "v2",
+      "turn": 269,
+      "score": 3224,
+      "max_tile": 256,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527005,
+      "policy": "hard",
+      "turn": 127,
+      "score": 1108,
+      "max_tile": 64,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527005,
+      "policy": "v2",
+      "turn": 139,
+      "score": 1168,
+      "max_tile": 64,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527006,
+      "policy": "hard",
+      "turn": 184,
+      "score": 1880,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527006,
+      "policy": "v2",
+      "turn": 245,
+      "score": 3024,
+      "max_tile": 256,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527007,
+      "policy": "hard",
+      "turn": 213,
+      "score": 2484,
+      "max_tile": 256,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527007,
+      "policy": "v2",
+      "turn": 193,
+      "score": 1900,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527008,
+      "policy": "hard",
+      "turn": 313,
+      "score": 3688,
+      "max_tile": 256,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527008,
+      "policy": "v2",
+      "turn": 222,
+      "score": 2312,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527009,
+      "policy": "hard",
+      "turn": 69,
+      "score": 472,
+      "max_tile": 64,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527009,
+      "policy": "v2",
+      "turn": 129,
+      "score": 1276,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527010,
+      "policy": "hard",
+      "turn": 135,
+      "score": 1252,
+      "max_tile": 128,
+      "stop": "terminal"
+    },
+    {
+      "seed": 95527010,
+      "policy": "v2",
+      "turn": 112,
+      "score": 816,
+      "max_tile": 64,
+      "stop": "terminal"
+    }
+  ],
+  "paired": {
+    "n": 10,
+    "hard_wins": 5,
+    "ties": 0,
+    "v2_wins": 5,
+    "arms": {
+      "v2": {
+        "median_score": 2106.0,
+        "median_moves": 195.5,
+        "median_tile": 128.0,
+        "n_capped": 0,
+        "thresholds": {
+          "64": 10,
+          "128": 8,
+          "256": 3,
+          "512": 0,
+          "1024": 0,
+          "2048": 0
+        }
+      },
+      "hard": {
+        "median_score": 2162.0,
+        "median_moves": 198.5,
+        "median_tile": 128.0,
+        "n_capped": 0,
+        "thresholds": {
+          "64": 10,
+          "128": 7,
+          "256": 4,
+          "512": 0,
+          "1024": 0,
+          "2048": 0
+        }
+      }
+    },
+    "hard_minus_v2_mean": -54.8,
+    "hard_minus_v2_median": 14.0,
+    "paired_bootstrap_mean_diff_95_exploratory": [
+      -636.4,
+      526.8
+    ],
+    "wilson_95_for_probability_hard_win_with_ties_as_nonwins": [
+      0.23659309051256927,
+      0.7634069094874307
+    ]
+  },
+  "same_horizon_greedy_endpoint": [
+    {
+      "seed": 95527001,
+      "policy": "v2",
+      "horizon": 198,
+      "model_score": 2356,
+      "model_tile": 256,
+      "greedy_turn": 198,
+      "greedy_score": 2420,
+      "greedy_tile": 256,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527001,
+      "policy": "hard",
+      "horizon": 228,
+      "model_score": 2444,
+      "model_tile": 128,
+      "greedy_turn": 228,
+      "greedy_score": 2732,
+      "greedy_tile": 256,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527002,
+      "policy": "v2",
+      "horizon": 222,
+      "model_score": 2376,
+      "model_tile": 128,
+      "greedy_turn": 222,
+      "greedy_score": 2672,
+      "greedy_tile": 256,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527002,
+      "policy": "hard",
+      "horizon": 101,
+      "model_score": 756,
+      "model_tile": 64,
+      "greedy_turn": 101,
+      "greedy_score": 972,
+      "greedy_tile": 128,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527003,
+      "policy": "v2",
+      "horizon": 150,
+      "model_score": 1428,
+      "model_tile": 128,
+      "greedy_turn": 150,
+      "greedy_score": 1928,
+      "greedy_tile": 256,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527003,
+      "policy": "hard",
+      "horizon": 219,
+      "model_score": 2612,
+      "model_tile": 256,
+      "greedy_turn": 219,
+      "greedy_score": 2744,
+      "greedy_tile": 256,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527004,
+      "policy": "v2",
+      "horizon": 269,
+      "model_score": 3224,
+      "model_tile": 256,
+      "greedy_turn": 247,
+      "greedy_score": 2584,
+      "greedy_tile": 128,
+      "greedy_terminal": true
+    },
+    {
+      "seed": 95527004,
+      "policy": "hard",
+      "horizon": 227,
+      "model_score": 2636,
+      "model_tile": 256,
+      "greedy_turn": 227,
+      "greedy_score": 2472,
+      "greedy_tile": 128,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527005,
+      "policy": "v2",
+      "horizon": 139,
+      "model_score": 1168,
+      "model_tile": 64,
+      "greedy_turn": 139,
+      "greedy_score": 1360,
+      "greedy_tile": 128,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527005,
+      "policy": "hard",
+      "horizon": 127,
+      "model_score": 1108,
+      "model_tile": 64,
+      "greedy_turn": 127,
+      "greedy_score": 1276,
+      "greedy_tile": 128,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527006,
+      "policy": "v2",
+      "horizon": 245,
+      "model_score": 3024,
+      "model_tile": 256,
+      "greedy_turn": 245,
+      "greedy_score": 2860,
+      "greedy_tile": 256,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527006,
+      "policy": "hard",
+      "horizon": 184,
+      "model_score": 1880,
+      "model_tile": 128,
+      "greedy_turn": 184,
+      "greedy_score": 2300,
+      "greedy_tile": 256,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527007,
+      "policy": "v2",
+      "horizon": 193,
+      "model_score": 1900,
+      "model_tile": 128,
+      "greedy_turn": 193,
+      "greedy_score": 2136,
+      "greedy_tile": 128,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527007,
+      "policy": "hard",
+      "horizon": 213,
+      "model_score": 2484,
+      "model_tile": 256,
+      "greedy_turn": 213,
+      "greedy_score": 2596,
+      "greedy_tile": 256,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527008,
+      "policy": "v2",
+      "horizon": 222,
+      "model_score": 2312,
+      "model_tile": 128,
+      "greedy_turn": 222,
+      "greedy_score": 2640,
+      "greedy_tile": 256,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527008,
+      "policy": "hard",
+      "horizon": 313,
+      "model_score": 3688,
+      "model_tile": 256,
+      "greedy_turn": 299,
+      "greedy_score": 3644,
+      "greedy_tile": 256,
+      "greedy_terminal": true
+    },
+    {
+      "seed": 95527009,
+      "policy": "v2",
+      "horizon": 129,
+      "model_score": 1276,
+      "model_tile": 128,
+      "greedy_turn": 129,
+      "greedy_score": 1312,
+      "greedy_tile": 128,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527009,
+      "policy": "hard",
+      "horizon": 69,
+      "model_score": 472,
+      "model_tile": 64,
+      "greedy_turn": 69,
+      "greedy_score": 544,
+      "greedy_tile": 64,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527010,
+      "policy": "v2",
+      "horizon": 112,
+      "model_score": 816,
+      "model_tile": 64,
+      "greedy_turn": 112,
+      "greedy_score": 1088,
+      "greedy_tile": 128,
+      "greedy_terminal": false
+    },
+    {
+      "seed": 95527010,
+      "policy": "hard",
+      "horizon": 135,
+      "model_score": 1252,
+      "model_tile": 128,
+      "greedy_turn": 135,
+      "greedy_score": 1340,
+      "greedy_tile": 128,
+      "greedy_terminal": false
+    }
+  ]
+}

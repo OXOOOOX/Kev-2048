@@ -1,0 +1,16 @@
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "kev2048-release"
+version = "0.1.0"
+description = "Offline 2048 imitation training on the native Kev pointer head"
+requires-python = ">=3.12,<3.14"
+dependencies = []
+
+[project.scripts]
+kev2048 = "kev2048_release.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
