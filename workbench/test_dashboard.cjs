@@ -28,9 +28,10 @@ const rows={channels:[
  {name:'待命D',mode:'progress_log',kind:'training',status:'waiting'},
  {name:'过期E',mode:'in_session',kind:'inference',status:'stale',updated_at:iso(450000)},
 ]};
-function harness(location){
+function harness(location,folderSupported=false){
  const refs={};for(const id of ids)refs[id]=new Node('div');
  refs.speed.value='1';refs.replay.hidden=true;
+ if(folderSupported)refs['folder-input'].webkitdirectory=true;
  const panels=['left','right'].map(slot=>{
   const p=new Node('article');p.dataset.slot=slot;p.fields={};
   for(const n of ['.board','h2','.panel-source','.status','.score-label','.score','.move-label','.move-name','.arrow','.best','.decision-note','.final'])p.fields[n]=new Node('div');
@@ -87,6 +88,40 @@ const collect=e=>[String(e.textContent),...e.children.map(collect)].join(' ');
  assert.equal(f.panels[0].fields['.status'].textContent,'步数到限');
  a['arcade-monitor-tab'].click();a['arcade-review-tab'].click();assert.equal(a['turn-output'].textContent,'第 4 / 4 步');
  assert.equal(f.requests.length,0);
+ const folder=harness({protocol:'file:',hostname:''},true);
+ const b=folder.refs;b['arcade-review-tab'].click();
+ assert.equal(b['pick-folder'].hidden,false);
+ assert.equal(a['pick-folder'].hidden,true);
+ let readCount=0;
+ const file=(p,mtime,contents=sample,size=Buffer.byteLength(contents))=>({
+  name:p.split('/').at(-1),webkitRelativePath:p,lastModified:mtime,size,
+  text:async()=>{readCount++;return contents}
+ });
+ b['folder-input'].files=[
+  file('runs/a/moves.jsonl',20),
+  file('runs/b/benchmark.json',200,'{}'),
+  file('runs/b/worker.progress.jsonl',190,'{}'),
+  file('project/experiments/traces/stock.jsonl',40),
+  file('runs/live/8e10ad515d634e63a231d66d74bdbab1.jsonl',35),
+  file('runs/b/big-moves.jsonl',60,sample,17*1048576),
+  file('project/elsewhere/stock.jsonl',50),
+ ];
+ b['folder-input'].event('change');
+ assert.equal(readCount,0); // enumerating a folder never reads any file body
+ const found=b['folder-list'].children;
+ assert.equal(found.length,4);
+ assert.deepEqual(found.map(x=>x.children[1].children[0].textContent),[
+  'runs/b/big-moves.jsonl','project/experiments/traces/stock.jsonl','runs/live/8e10ad515d634e63a231d66d74bdbab1.jsonl','runs/a/moves.jsonl'
+ ]);
+ assert.equal(found[0].children[0].disabled,true);
+ assert.equal(b['open-folder-files'].disabled,true);
+ for(const i of [1,3]){found[i].children[0].checked=true;found[i].children[0].event('change')}
+ assert.match(b['folder-selection'].textContent,/已选 2 个/);
+ b['open-folder-files'].click();await flush();
+ assert.equal(readCount,2);assert.equal(b['turn-output'].textContent,'第 0 / 4 步');
+ assert.match(folder.panels[0].fields['.panel-source'].textContent,/project\/experiments\/traces\/stock.jsonl/);
+ assert.match(folder.panels[1].fields['.panel-source'].textContent,/runs\/a\/moves.jsonl/);
+ assert.equal(folder.requests.length,0);
  const outside=harness({protocol:'https:',hostname:'example.invalid'});await flush();assert.equal(outside.requests.length,0);
- console.log('PASS combined dashboard: GET-only loopback, real signal and missing/stale/static classification, filters, disconnect retention, file replay and tab-state persistence.');
+ console.log('PASS combined dashboard: GET-only loopback, real signal and missing/stale/static classification, filters, disconnect retention, file replay tab-state persistence, and lazily chosen folder candidates / direct-file fallback.');
 })().catch(e=>{console.error(e);process.exitCode=1});
