@@ -5,16 +5,17 @@ HERE = Path(__file__).resolve().parent
 LAUNCH = HERE / "launcher"
 base = (LAUNCH / "replay-template.html").read_text(encoding="utf-8")
 parser = (LAUNCH / "parser.js").read_text(encoding="utf-8")
+runs = (LAUNCH / "runs.js").read_text(encoding="utf-8")
 app = (LAUNCH / "app.js").read_text(encoding="utf-8")
 motion = (LAUNCH / "motion.js").read_text(encoding="utf-8")
-for script in (parser, app, motion):
+for script in (parser, runs, app, motion):
     if "</script" in script.lower():
         raise ValueError("Unexpected HTML in application source")
 if app.count("/* SHARED_MOTION */") != 1:
     raise ValueError("Missing or duplicate replay animation placeholder")
 if any(base.count(key) != 1 for key in ("/* TRACE_PARSER */", "/* REPLAY_APP */")):
     raise ValueError("Missing or duplicate replay placeholders")
-base = (base.replace("/* TRACE_PARSER */", parser)
+base = (base.replace("/* TRACE_PARSER */", parser + "\n" + runs)
             .replace("/* REPLAY_APP */", app.replace("/* SHARED_MOTION */", motion)))
 css = (LAUNCH / "controls.css").read_text(encoding="utf-8")
 js = (LAUNCH / "controls.js").read_text(encoding="utf-8")

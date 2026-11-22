@@ -103,7 +103,7 @@
         let g=groups.get(key);
         if (!g) {
           if (groups.size>=MAX_TRACKS) fail('对局轨道数超限');
-          g={id:sourceId+'-game-'+groups.size,sourceId,file,seed:r.seed,label:p,policy:p,frames:[],
+          g={id:sourceId+'-game-'+groups.size,sourceId,file,seed:r.seed,label:p,policy:p,runId:r.run_id??null,frames:[],
              status:'incomplete',cap:null,ended:false,seq:null,opening:null};
           groups.set(key,g);
         }
@@ -182,7 +182,7 @@
     const out=[...groups.values()].filter(g=>g.frames.length>1);
     if (!out.length) fail('没有可验证的完整走子');
     if (out.length!==groups.size) fail('文件混有不能回放的运行');
-    return out.map(({id,file,sourceId,seed,label,policy,frames,status}) => ({id,file,sourceId,seed,label,policy,frames,status}));
+    return out.map(({id,file,sourceId,seed,label,policy,runId,cap,frames,status}) => ({id,file,sourceId,seed,label,policy,runId,cap,frames,status}));
   }
   const api={parseTrace,MAX_BYTES,MAX_ROWS,MAX_TRACKS,MAX_TURNS};
   root.KevTrace=api;

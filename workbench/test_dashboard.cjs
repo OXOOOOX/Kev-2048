@@ -13,7 +13,7 @@ class Node{
  remove(){this.parent.children=this.parent.children.filter(n=>n!==this)}
  addEventListener(k,f){this.handlers[k]=f}
  event(k,e={}){return this.handlers[k]?.(e)}
- click(){this.event('click')}
+ click(){if(!this.disabled)return this.event('click')}
  focus(){this.focused=true}
  setAttribute(k,v){this.attrs[k]=v}
  getAttribute(k){return this.attrs[k]}
@@ -34,7 +34,7 @@ function harness(location,folderSupported=false){
  if(folderSupported)refs['folder-input'].webkitdirectory=true;
  const panels=['left','right'].map(slot=>{
   const p=new Node('article');p.dataset.slot=slot;p.fields={};
-  for(const n of ['.board','h2','.panel-source','.status','.score-label','.score','.move-label','.move-name','.arrow','.best','.decision-note','.final'])p.fields[n]=new Node('div');
+  for(const n of ['.board','h2','.panel-source','.run-meta','.status','.score-label','.score','.move-label','.move-name','.arrow','.best','.decision-note','.final'])p.fields[n]=new Node('div');
   p.querySelector=k=>p.fields[k];return p;
  });
  const types=['all','training','inference','benchmark'];
@@ -86,6 +86,11 @@ const collect=e=>[String(e.textContent),...e.children.map(collect)].join(' ');
  a['jump-end'].click();assert.equal(a['turn-output'].textContent,'第 4 / 4 步');
  assert.equal(f.panels[0].fields['.score'].textContent,'8');
  assert.equal(f.panels[0].fields['.status'].textContent,'步数到限');
+ assert.equal(a['import-tools'].hidden,true);
+ assert.equal(a['toggle-import'].getAttribute('aria-expanded'),'false');
+ assert.equal(a['toggle-import'].focused,true);
+ a['toggle-import'].click();assert.equal(a['import-tools'].hidden,false);
+ a['toggle-import'].click();assert.equal(a['import-tools'].hidden,true);
  a['arcade-monitor-tab'].click();a['arcade-review-tab'].click();assert.equal(a['turn-output'].textContent,'第 4 / 4 步');
  assert.equal(f.requests.length,0);
  const folder=harness({protocol:'file:',hostname:''},true);
@@ -111,17 +116,79 @@ const collect=e=>[String(e.textContent),...e.children.map(collect)].join(' ');
  const found=b['folder-list'].children;
  assert.equal(found.length,4);
  assert.deepEqual(found.map(x=>x.children[1].children[0].textContent),[
-  'runs/b/big-moves.jsonl','project/experiments/traces/stock.jsonl','runs/live/8e10ad515d634e63a231d66d74bdbab1.jsonl','runs/a/moves.jsonl'
+  'project/experiments/traces/stock.jsonl','runs/live/8e10ad515d634e63a231d66d74bdbab1.jsonl','runs/a/moves.jsonl','runs/b/big-moves.jsonl'
  ]);
- assert.equal(found[0].children[0].disabled,true);
+ assert.equal(found[3].children[0].disabled,true);
  assert.equal(b['open-folder-files'].disabled,true);
- for(const i of [1,3]){found[i].children[0].checked=true;found[i].children[0].event('change')}
- assert.match(b['folder-selection'].textContent,/已选 2 个/);
+ for(const i of [0,2]){found[i].children[0].checked=true;found[i].children[0].event('change')}
+ assert.match(b['folder-selection'].textContent,/已选 2 次运行/);
  b['open-folder-files'].click();await flush();
  assert.equal(readCount,2);assert.equal(b['turn-output'].textContent,'第 0 / 4 步');
  assert.match(folder.panels[0].fields['.panel-source'].textContent,/project\/experiments\/traces\/stock.jsonl/);
  assert.match(folder.panels[1].fields['.panel-source'].textContent,/runs\/a\/moves.jsonl/);
+ assert.equal(b['import-tools'].hidden,true);
+ b['toggle-import'].click();assert.equal(b['folder-list'].children[0].children[0].checked,true);
  assert.equal(folder.requests.length,0);
+
+ // Load additional candidates without losing choices or reading bodies.
+ const paged=harness({protocol:'file:',hostname:''},true),p=paged.refs;
+ const beforeListing=readCount;
+ p['folder-input'].files=Array.from({length:121},(_,i)=>file('runs/run-'+i+'/moves.jsonl',200-i));
+ p['folder-input'].files.push(file('runs/new-empty/moves.jsonl',1000,'',0));
+ p['folder-input'].event('change');
+ assert.equal(p['folder-list'].children.length,120);
+ const first=p['folder-list'].children[0].children[0];first.checked=true;first.event('change');
+ p['more-folder-files'].click();
+ assert.equal(p['folder-list'].children.length,122);
+ assert.equal(p['folder-list'].children[0].children[0].checked,true);
+ const later=p['folder-list'].children[120].children[0];later.checked=true;later.event('change');
+ assert.equal(p['folder-list'].children[121].children[0].disabled,true);
+ assert.match(p['folder-selection'].textContent,/已选 2 次运行/);
+ assert.equal(readCount,beforeListing);
+ p['open-folder-files'].click();await flush();
+ assert.match(p['import-status'].textContent,/已载入 2 次运行/);
+ assert.equal(readCount,beforeListing+2);
+
+ // A selected run includes sidecars, counts once and shows reported identity.
+ const trace=require('./launcher/parser.js').parseTrace(sample)[0],last=trace.frames.at(-1);
+ const summary={checkpoint_head_sha256:'a'.repeat(64),device:'cuda',cap:last.p,games:[{seed:trace.seed,turn:last.p,score:last.s,tile:last.m,stop:'cap'}]};
+ const manifest={schema_version:1,kind:'play',variant:'测试模型 A',files:{moves:'moves.jsonl',result:'result.json'},model:{head_sha256:'a'.repeat(64)}};
+ const withMeta=harness({protocol:'file:',hostname:''},true),m=withMeta.refs;
+ m['file-input'].files=[file('run-a/moves.jsonl',1),file('run-a/result.json',1,JSON.stringify(summary)),file('run-a/run.json',1,JSON.stringify(manifest))];
+ m['file-input'].event('change');await flush();
+ assert.match(m['import-status'].textContent,/已载入 1 次运行/);
+ assert.match(withMeta.panels[0].fields.h2.textContent,/测试模型 A/);
+ assert.match(withMeta.panels[0].fields['.run-meta'].textContent,/cuda.*aaaaaaaaaaaa/);
+ m['jump-end'].click();assert.equal(withMeta.panels[0].fields['.status'].textContent,'步数到限');
+ // A failing batch keeps the previous board, position and selection, and names the path.
+ const oldChoice=m['left-select'].value;
+ m['file-input'].files=[file('good/moves.jsonl',1),file('broken/moves.jsonl',1,'broken')];
+ m['file-input'].event('change');await flush();
+ assert.match(m['import-status'].textContent,/broken\/moves.jsonl.*保留/);
+ assert.equal(m['turn-output'].textContent,'第 4 / 4 步');
+ assert.equal(m['left-select'].value,oldChoice);
+ assert.equal(m['import-tools'].hidden,false);
+ assert.equal(m.pick.disabled,false);
+ // Nine runs remain prohibited even when listing spans more than one page.
+ m['file-input'].files=Array.from({length:9},(_,i)=>file('runs/'+i+'/moves.jsonl',1));
+ m['file-input'].event('change');await flush();assert.match(m['import-status'].textContent,/最多 8 次运行/);
+
+ // Unsupported JSON summaries do not replace an existing successful import.
+ m['file-input'].files=[file('summary-only/result.json',1,JSON.stringify(summary))];
+ m['file-input'].event('change');await flush();assert.match(m['import-status'].textContent,/摘要不能单独回放/);
+ assert.equal(m['turn-output'].textContent,'第 4 / 4 步');
+
+ // A stale asynchronous import must not overwrite a newer import or its collapsed state.
+ let releaseSlow;
+ const slow=file('slow/moves.jsonl',1);slow.text=()=>new Promise(resolve=>{releaseSlow=resolve});
+ m['file-input'].files=[slow];m['file-input'].event('change');await flush();
+ assert.equal(m.pick.disabled,true);
+ m['import-panel'].event('drop',{preventDefault(){},dataTransfer:{files:[file('new/moves.jsonl',1)]}});
+ await flush();const newSource=withMeta.panels[0].fields['.panel-source'].textContent;
+ releaseSlow(sample);await flush();
+ assert.equal(withMeta.panels[0].fields['.panel-source'].textContent,newSource);
+ assert.match(newSource,/new\/moves.jsonl/);
+ assert.equal(m['import-tools'].hidden,true);assert.equal(m.pick.disabled,false);
  const outside=harness({protocol:'https:',hostname:'example.invalid'});await flush();assert.equal(outside.requests.length,0);
- console.log('PASS combined dashboard: GET-only loopback, real signal and missing/stale/static classification, filters, disconnect retention, file replay tab-state persistence, and lazily chosen folder candidates / direct-file fallback.');
+ console.log('PASS combined dashboard: monitor isolation, replay, run sidecars, collapse/focus, paged selection, usable-first ordering, path errors, failed import retention and asynchronous replacement.');
 })().catch(e=>{console.error(e);process.exitCode=1});

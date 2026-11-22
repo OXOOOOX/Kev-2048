@@ -5,7 +5,7 @@ const seek=$('seek'),play=$('play'),prev=$('prev'),next=$('next'),speed=$('speed
 const turnText=$('turn-output'),ticks=$('ticks'),divergence=$('jump-divergence');
 const names={up:['↑','向上'],down:['↓','向下'],left:['←','向左'],right:['→','向右']};
 const fmt=new Intl.NumberFormat('zh-CN');
-const words={terminal:'自然终局',cap:'步数到限',stopped:'已手动停止',incomplete:'记录不完整'};
+const words={terminal:'自然终局',cap:'步数到限',stopped:'已手动停止',incomplete:'结束原因未知'};
 const policyNames={canonical:'标准选项',fixed:'固定槽位',identity:'原始棋盘',d4:'八方向投票',v2:'V2',hard:'V3-hard',greedy:'贪心参考',candidate:'候选版本',native:'原生模型',frozen_v2:'冻结 V2',official_kev_0_8b:'官方 Kev 0.8B'};
 const MAX_FILES=8, MAX_TOTAL_BYTES=48*1024*1024, MAX_TOTAL_GAMES=256, MAX_TOTAL_FRAMES=100000;
 let groups=new Map(),match={},turn=0,maxTurn=0,timer=null,playing=false,cut=null,loadId=0;
@@ -15,7 +15,7 @@ for(const p of document.querySelectorAll('.panel')){
  const nodes=Array.from({length:16},()=>{
   const t=document.createElement('div');t.className='tile';t.setAttribute('aria-hidden','true');b.append(t);return t;
  });
- panels[p.dataset.slot]={element:p,nodes,board:b,title:get('h2'),source:get('.panel-source'),status:get('.status'),scoreLabel:get('.score-label'),score:get('.score'),moveLabel:get('.move-label'),move:get('.move-name'),arrow:get('.arrow'),best:get('.best'),note:get('.decision-note'),final:get('.final')};
+ panels[p.dataset.slot]={element:p,nodes,board:b,title:get('h2'),source:get('.panel-source'),meta:get('.run-meta'),status:get('.status'),scoreLabel:get('.score-label'),score:get('.score'),moveLabel:get('.move-label'),move:get('.move-name'),arrow:get('.arrow'),best:get('.best'),note:get('.decision-note'),final:get('.final')};
 }
 function options(select,values,chosen){
  select.replaceChildren(...values.map(([key,text])=>{
@@ -26,9 +26,10 @@ function options(select,values,chosen){
 const eq=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
 const maxP=g=>g.frames.at(-1).p;
 const frame=(g,p)=>g.frames[Math.min(p,maxP(g))];
-const revealFile=g=>'文件 '+g.sourceOrder+' · '+(g.displayFile||g.file);
-const titleOf=g=>(Object.hasOwn(policyNames,g.policy)?policyNames[g.policy]:null)||g.label||g.policy||'原生模型';
-const optionName=g=>revealFile(g)+' · '+titleOf(g);
+const revealFile=g=>'运行 '+g.sourceOrder+' · '+(g.displayFile||g.file);
+const policyTitle=g=>(Object.hasOwn(policyNames,g.policy)?policyNames[g.policy]:null)||g.label||g.policy||'原生模型';
+const titleOf=g=>g.runTitle?(g.policy==='native'||g.runTitle===policyTitle(g)?g.runTitle:g.runTitle+' · '+policyTitle(g)):policyTitle(g);
+const optionName=g=>titleOf(g)+' · '+revealFile(g);
 function putPanel(key){
  const g=match[key], refs=panels[key];
  refs.element.hidden=!g;
@@ -36,6 +37,9 @@ function putPanel(key){
  const end=maxP(g),shown=Math.min(turn,end),f=frame(g,turn),frozen=turn>end;
  const action=f.a,spawn=f.n,board=f.b;
  refs.title.textContent=titleOf(g);refs.source.textContent=revealFile(g);
+ const identity=[g.device?'设备 '+g.device:'',g.headSha?'头指纹 '+g.headSha.slice(0,12):''].filter(Boolean);
+ refs.meta.hidden=!identity.length;refs.meta.textContent=identity.join(' · ');
+ refs.meta.title=g.headSha?'日志报告的检查点 SHA-256：'+g.headSha:'';
  for(let i=0;i<16;i++){
   const tile=refs.nodes[i];tile.dataset.value=board[i];tile.textContent=board[i]||'';
   const fresh=i===spawn&&!frozen;tile.classList.toggle('spawn',fresh);
@@ -52,7 +56,7 @@ function putPanel(key){
  refs.best.textContent=f.m;
  refs.final.textContent='第 '+end+' 步 · '+fmt.format(g.frames.at(-1).s)+' 分 · '+words[g.status];
  refs.note.textContent=frozen?'此侧记录止于第 '+end+' 步，棋盘保持不变。':
- g.status==='incomplete'&&shown===end?'文件没有终局或截断标记；未补写后续走法。':
+ g.status==='incomplete'&&shown===end?'仍有合法动作；没有匹配的结束摘要或标记，结束原因未知。':
  action?(f.g?'本步合并 +'+fmt.format(f.g)+' 分':'本步无合并得分'):'等待选择下一步。';
 }
 function draw(){
@@ -146,34 +150,44 @@ function chooseSeed(){
 function importMessage(text,error=false){
  const el=$('import-status');el.dataset.error=String(error);el.textContent=text;
 }
+function setImportExpanded(expanded){
+ $('import-tools').hidden=!expanded;
+ $('import-panel').dataset.collapsed=String(!expanded);
+ $('toggle-import').hidden=!groups.size;
+ $('toggle-import').setAttribute('aria-expanded',String(expanded));
+ $('toggle-import').textContent=expanded?'收起文件列表':'更换记录';
+}
+function importError(error){
+ setImportExpanded(true);
+ importMessage(String(error.message||error)+(groups.size?' 已保留上一次成功导入的回放。':''),true);
+}
 async function importFiles(files){
  if(!files.length)return;
+ try{await importRuns(KevRuns.describeFiles(files,{direct:true}))}
+ catch(error){++loadId;$('pick').disabled=false;$('pick-folder').disabled=false;importError(error);updateFolderSelection()}
+}
+async function importRuns(entries){
  const my=++loadId;
- const fileMax=Math.min(KevTrace.MAX_BYTES||25*1024*1024,25*1024*1024);
+ stop();
  $('pick').disabled=true; $('pick-folder').disabled=true; $('open-folder-files').disabled=true;
- importMessage('正在本地读取 '+files.length+' 个文件…');
+ importMessage('正在本地读取 '+entries.length+' 次运行…');
  try{
-  if(files.length>MAX_FILES||files.reduce((sum,f)=>sum+f.size,0)>MAX_TOTAL_BYTES)
-   throw Error('可一次导入最多 8 个文件，总大小不超过 48 MiB。');
-  if(files.some(f=>f.size===0||f.size>fileMax))
-   throw Error('有空文件，或单个文件超过 '+Math.floor(fileMax/1048576)+' MiB。没有读取文件内容。');
+  if(!entries.length)throw Error('没有找到逐步日志；摘要不能单独回放。请选择日志或对应运行文件夹。');
+  if(entries.length>MAX_FILES||entries.reduce((sum,e)=>sum+e.bytes,0)>MAX_TOTAL_BYTES)
+   throw Error('可一次导入最多 8 次运行，含摘要总大小不超过 48 MiB。');
+  const unavailable=entries.find(e=>e.disabled);
+  if(unavailable)throw Error('「'+unavailable.path+'」：'+unavailable.disabledReason);
   const staged=new Map();let count=0,totalFrames=0;
-  for(const [i,f] of files.entries()){
+  for(const [i,entry] of entries.entries()){
    if(my!==loadId)return;
-   let games;
-   const readable=f.name||('未命名文件 '+(i+1));
-   try{
-    const raw=await f.text();
-    if(my!==loadId)return;
-    games=KevTrace.parseTrace(raw,readable);
-   }catch(e){throw Error('「'+readable+'」：'+String(e.message||e).slice(0,220));}
+   const {games}=await KevRuns.loadRun(entry);
+   if(my!==loadId)return;
    for(const [j,g] of games.entries()){
     if(++count>MAX_TOTAL_GAMES||(totalFrames+=g.frames.length)>MAX_TOTAL_FRAMES)
      throw Error('本次对局数或帧数超过页面上限；请选择更少的结果文件。');
     const group=String(g.seed);
     if(!staged.has(group))staged.set(group,[]);
-    const displayFile=f.webkitRelativePath?f.webkitRelativePath.slice(0,300):null;
-    staged.get(group).push({...g,displayFile,uid:'file-'+i+'-game-'+j,sourceOrder:i+1});
+    staged.get(group).push({...g,displayFile:entry.path,uid:'file-'+i+'-game-'+j,sourceOrder:i+1});
    }
   }
   if(my!==loadId)return;
@@ -184,14 +198,17 @@ async function importFiles(files){
   options(seedSelect,seedKeys.map(k=>[k,k+' · '+groups.get(k).length+' 局']),preferred);
   $('empty').hidden=true;$('replay').hidden=false;
   chooseSeed();
-  importMessage('已读取 '+files.length+' 个文件 · '+count+' 局 · '+groups.size+' 个种子。文件未上传。');
+  importMessage('已载入 '+entries.length+' 次运行 · '+count+' 局 · '+groups.size+' 个种子。文件未上传。');
+  setImportExpanded(false);$('toggle-import').focus();
  }catch(e){
-  if(my===loadId)importMessage(String(e.message||e)+(groups.size?' 已保留上一次成功导入的回放。':''),true);
+  if(my===loadId)importError(e);
  }finally{
   if(my===loadId){$('pick').disabled=false;$('pick-folder').disabled=false;updateFolderSelection()}
  }
 }
 const drop=$('import-panel'),fileInput=$('file-input');
+setImportExpanded(true);
+$('toggle-import').addEventListener('click',()=>setImportExpanded($('import-tools').hidden));
 $('pick').addEventListener('click',()=>fileInput.click());
 fileInput.addEventListener('change',()=>{
  const files=Array.from(fileInput.files||[]);fileInput.value='';importFiles(files);
@@ -199,45 +216,43 @@ fileInput.addEventListener('change',()=>{
 const folderInput=$('folder-input'),pickFolder=$('pick-folder'),openFolder=$('open-folder-files');
 const folderSupported='webkitdirectory' in folderInput;
 const fDate=new Intl.DateTimeFormat('zh-CN',{dateStyle:'short',timeStyle:'short'});
-const fPath=f=>f.webkitRelativePath||f.name||'';
-const MAX_CANDIDATES=120;
-let folderRows=[];
-function likelyTrace(f){
- const path=fPath(f).replaceAll('\\','/').toLowerCase();
- const pieces=path.split('/'), name=pieces.at(-1);
- if(!/\.(jsonl|ndjson)$/.test(name) || /(^|[-_.])(benchmark|bench|summary|progress|timing|metrics|train|dev|loss|report|lock)([-_.]|$)/.test(name))return false;
- if(/(^|[-_.])(moves?|traces?|replays?|events?|gameplay|games?)([-_.]|$)/.test(name))return true;
- const stem=name.replace(/\.(jsonl|ndjson)$/,'');
- if(pieces.slice(0,-1).includes('traces')&&/^(d4|wide|stock|[a-z0-9]+[-_][a-z0-9_-]+)$/.test(stem))return true;
- return pieces.slice(0,-1).includes('live')&&/^[0-9a-f]{32}$/.test(stem);
-}
+const PAGE_SIZE=120;
+let folderRows=[],visibleCandidates=PAGE_SIZE;
 function updateFolderSelection(){
- const selected=folderRows.filter(x=>x.box.checked);
- const bytes=selected.reduce((sum,x)=>sum+x.file.size,0);
+ const selected=folderRows.filter(x=>x.checked);
+ const bytes=selected.reduce((sum,x)=>sum+x.entry.bytes,0);
  const valid=selected.length<=MAX_FILES&&bytes<=MAX_TOTAL_BYTES;
  openFolder.disabled=!selected.length||!valid||$('pick').disabled;
  $('folder-selection').textContent=selected.length
-  ?'已选 '+selected.length+' 个 · '+(bytes/1048576).toFixed(2)+' MiB'+(valid?'':'，最多 '+MAX_FILES+' 个、共 48 MiB')
+  ?'已选 '+selected.length+' 次运行 · '+(bytes/1048576).toFixed(2)+' MiB'+(valid?'':'，最多 '+MAX_FILES+' 次运行、共 48 MiB')
   :'未选择';
 }
 function showFolder(files){
- const matches=Array.from(files).filter(likelyTrace).sort((a,b)=>(b.lastModified||0)-(a.lastModified||0)||fPath(a).localeCompare(fPath(b),'zh-CN',{numeric:true}));
- const limit=Math.min(KevTrace.MAX_BYTES||16*1024*1024,16*1024*1024);
- const rows=[];
- folderRows=matches.slice(0,MAX_CANDIDATES).map(f=>{
+ try{
+  const entries=KevRuns.describeFiles(files).sort((a,b)=>Number(a.disabled)-Number(b.disabled)||(b.file.lastModified||0)-(a.file.lastModified||0)||a.path.localeCompare(b.path,'zh-CN',{numeric:true}));
+  folderRows=entries.map(entry=>({entry,checked:false}));visibleCandidates=PAGE_SIZE;
+  setImportExpanded(true);renderFolder();
+ }catch(error){importError(error)}
+}
+function renderFolder(){
+ const shown=folderRows.slice(0,visibleCandidates);
+ const rows=shown.map(row=>{
+  const {entry}=row,f=entry.file;
   const wrap=document.createElement('label');wrap.className='folder-choice';
-  const box=document.createElement('input');box.type='checkbox';box.disabled=f.size<1||f.size>limit;
+  const box=document.createElement('input');box.type='checkbox';box.disabled=entry.disabled;box.checked=row.checked;
   const span=document.createElement('span'),path=document.createElement('span'),meta=document.createElement('small');
-  path.className='folder-path';path.textContent=fPath(f).slice(0,300);
+  path.className='folder-path';path.textContent=entry.path;
   const time=Number.isFinite(f.lastModified)&&f.lastModified>0&&f.lastModified<=8640000000000000?fDate.format(f.lastModified):'修改时间未记录';
-  meta.className='folder-meta';meta.textContent=(f.size/1048576).toFixed(2)+' MiB · '+time+(box.disabled?' · 文件为空或超出单文件上限':'');
-  span.append(path,meta);wrap.append(box,span);rows.push(wrap);
-  box.addEventListener('change',updateFolderSelection);
-  return {box,file:f};
+  const parts=['日志',entry.resultFile?'结果摘要':'',entry.runFile?'运行信息':''].filter(Boolean).join(' + ');
+  meta.className='folder-meta';meta.textContent=(entry.bytes/1048576).toFixed(2)+' MiB · '+time+' · '+parts+(box.disabled?' · '+entry.disabledReason:'');
+  span.append(path,meta);wrap.append(box,span);
+  box.addEventListener('change',()=>{row.checked=box.checked;updateFolderSelection()});
+  return wrap;
  });
  $('folder-list').replaceChildren(...rows);
  $('folder-results').hidden=false;
- $('folder-summary').textContent=matches.length?'找到 '+matches.length+' 个候选，按修改时间从新到旧。'+(matches.length>MAX_CANDIDATES?'只列出前 '+MAX_CANDIDATES+' 个。':'')+'勾选后才读取内容。':'这个文件夹没有找到常见的对局文件名。可以改用「直接选记录文件」。';
+ $('more-folder-files').hidden=shown.length>=folderRows.length;
+ $('folder-summary').textContent=folderRows.length?'已显示 '+shown.length+' / '+folderRows.length+' 次运行。可导入优先，同类按修改时间从新到旧；勾选后才读取内容。':'这个文件夹没有找到常见的对局文件名。可以改用「直接选记录文件」。';
  updateFolderSelection();
 }
 pickFolder.hidden=!folderSupported;$('folder-help').hidden=!folderSupported;
@@ -248,8 +263,9 @@ folderInput.addEventListener('change',()=>{
  if(files.length)showFolder(files);
 });
 openFolder.addEventListener('click',()=>{
- if(!openFolder.disabled)importFiles(folderRows.filter(x=>x.box.checked).map(x=>x.file));
+ if(!openFolder.disabled)importRuns(folderRows.filter(x=>x.checked).map(x=>x.entry));
 });
+$('more-folder-files').addEventListener('click',()=>{visibleCandidates+=PAGE_SIZE;renderFolder()});
 drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.toggle('dragover',true)});
 drop.addEventListener('dragleave',()=>drop.classList.toggle('dragover',false));
 drop.addEventListener('drop',e=>{

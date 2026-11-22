@@ -101,6 +101,11 @@ input[type="range"]::-moz-range-thumb{border:3px solid var(--indigo);background:
 [hidden]{display:none!important}
 header .pill{color:#166655;background:#eaf7f2}
 #import-panel{padding:17px 19px;margin-bottom:17px}
+.import-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#import-tools{margin-top:10px}
+#import-panel[data-collapsed=true]{padding:10px 16px}
+#import-panel[data-collapsed=true] .import-title{font-size:16px}
+#import-panel[data-collapsed=true] #import-status{margin-top:3px}
 .import-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px}
 .import-title{font-size:19px}
 .import-help{font-size:13px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
@@ -129,6 +134,8 @@ header .pill{color:#166655;background:#eaf7f2}
 .same-step[data-mismatch=true]{color:var(--coral)}
 .boards.single{grid-template-columns:minmax(0,650px);justify-content:center}
 .panel-head p{overflow-wrap:anywhere}
+.run-meta{font-size:12px;color:var(--muted);margin:0 0 12px;overflow-wrap:anywhere}
+@media(max-width:520px){.run-meta{font-size:10px;margin-bottom:7px}.import-heading{gap:6px}}
 .panel[data-slot="right"]{--accent:var(--coral);--tone:#fcefea}
 .card{border:1px solid var(--line);border-radius:16px;background:white;box-shadow:0 3px 0 var(--shadow)}
 .blank{padding:34px 24px;text-align:center;color:var(--muted)}
@@ -187,16 +194,19 @@ header .pill{color:#166655;background:#eaf7f2}
 <div id="arcade-review-pane" role="tabpanel" aria-labelledby="arcade-review-tab" hidden>
 <section class="intro" aria-labelledby="main-title"><div><h1 id="main-title">2048 即时回看</h1><p class="subtitle">选中结果文件，就能回放真实棋局。无需装模型、开服务器或联网。</p></div></section>
 <section class="card" id="import-panel" aria-labelledby="import-title">
-<div class="import-grid"><div><h2 class="import-title" id="import-title">导入本地对局</h2><p class="import-help">测试后，到项目目录的 <code>runs/某次测试/moves.jsonl</code> 找逐步记录；仓库里的旧实验在 <code>experiments/traces/</code>。<code>benchmark.json</code> 只有摘要，不能回放。</p></div>
+<div class="import-heading"><h2 class="import-title" id="import-title">导入本地对局</h2><button type="button" class="picker secondary" id="toggle-import" aria-expanded="true" aria-controls="import-tools" hidden>收起文件列表</button></div>
+<div id="import-tools">
+<div class="import-grid"><div><p class="import-help">选择 <code>runs/</code> 中的一次或多次运行；也可打开 <code>experiments/traces/</code> 中的历史记录。直接选文件时，可一起选择日志及同目录的 <code>result.json</code>、<code>run.json</code>。</p></div>
 <div class="import-actions"><button type="button" class="picker secondary" id="pick-folder" aria-describedby="folder-help" hidden>先选文件夹</button><button type="button" class="picker" id="pick" aria-describedby="import-status">直接选记录文件</button></div>
 <input id="file-input" type="file" accept=".jsonl,.json,.ndjson,application/json,application/x-ndjson" multiple tabindex="-1" aria-label="选择对局文件">
 <input id="folder-input" type="file" webkitdirectory multiple tabindex="-1" aria-label="选择结果文件夹"></div>
-<p id="folder-help" class="folder-help" hidden>可以先选 <code>runs/</code> 或 <code>experiments/traces/</code>，页面列出其中可能是对局的文件。只读取你勾选的记录。</p>
+<p id="folder-help" class="folder-help" hidden>先列出候选，不读取内容；打开时只读取勾选的日志及其同目录摘要。摘要与日志一致后才关联，单独的摘要不能回放。</p>
 <section id="folder-results" class="folder-results" aria-labelledby="folder-heading" hidden>
-<h3 id="folder-heading">此文件夹中的可能对局记录</h3><p id="folder-summary" class="folder-help" role="status"></p>
+<h3 id="folder-heading">此文件夹中的运行</h3><p id="folder-summary" class="folder-help" role="status"></p>
 <div id="folder-list" class="folder-list"></div>
-<div class="folder-footer"><button type="button" class="picker" id="open-folder-files" disabled>打开所选记录</button><span id="folder-selection">未选择</span></div>
+<div class="folder-footer"><button type="button" class="picker" id="open-folder-files" disabled>打开所选记录</button><button type="button" class="picker secondary" id="more-folder-files" hidden>显示更多</button><span id="folder-selection">未选择</span></div>
 </section>
+</div>
 <p id="import-status" role="status">文件只在当前浏览器里读取。可同时选中两次测试的逐步记录。</p>
 </section>
 <section class="card blank" id="empty"><h2>还没有导入棋局</h2><p>选一个文件可播放单局；导入相同种子下的两个版本，可并排比较。</p></section>
@@ -210,12 +220,14 @@ header .pill{color:#166655;background:#eaf7f2}
 <div class="boards" id="boards">
 <article class="panel" data-slot="left">
 <div class="panel-head"><div><h2>左侧</h2><p class="panel-source"></p></div><span class="pill status"></span></div>
+<p class="run-meta" hidden></p>
 <div class="panel-main">
 <div class="board" role="img"></div>
 <dl class="stats"><div class="metric"><dt class="score-label"></dt><dd class="score"></dd></div><div class="metric move"><dt class="move-label"></dt><dd><span class="arrow" aria-hidden="true"></span><span class="move-name"></span></dd></div><div class="metric tile-best"><dt>最大方块</dt><dd class="best"></dd></div></dl>
 </div><p class="decision-note"></p><div class="panel-foot"><span>记录终点</span><span class="final"></span></div>
 </article><article class="panel" data-slot="right">
 <div class="panel-head"><div><h2>右侧</h2><p class="panel-source"></p></div><span class="pill status"></span></div>
+<p class="run-meta" hidden></p>
 <div class="panel-main">
 <div class="board" role="img"></div>
 <dl class="stats"><div class="metric"><dt class="score-label"></dt><dd class="score"></dd></div><div class="metric move"><dt class="move-label"></dt><dd><span class="arrow" aria-hidden="true"></span><span class="move-name"></span></dd></div><div class="metric tile-best"><dt>最大方块</dt><dd class="best"></dd></div></dl>
@@ -345,7 +357,7 @@ header .pill{color:#166655;background:#eaf7f2}
         let g=groups.get(key);
         if (!g) {
           if (groups.size>=MAX_TRACKS) fail('对局轨道数超限');
-          g={id:sourceId+'-game-'+groups.size,sourceId,file,seed:r.seed,label:p,policy:p,frames:[],
+          g={id:sourceId+'-game-'+groups.size,sourceId,file,seed:r.seed,label:p,policy:p,runId:r.run_id??null,frames:[],
              status:'incomplete',cap:null,ended:false,seq:null,opening:null};
           groups.set(key,g);
         }
@@ -424,12 +436,184 @@ header .pill{color:#166655;background:#eaf7f2}
     const out=[...groups.values()].filter(g=>g.frames.length>1);
     if (!out.length) fail('没有可验证的完整走子');
     if (out.length!==groups.size) fail('文件混有不能回放的运行');
-    return out.map(({id,file,sourceId,seed,label,policy,frames,status}) => ({id,file,sourceId,seed,label,policy,frames,status}));
+    return out.map(({id,file,sourceId,seed,label,policy,runId,cap,frames,status}) => ({id,file,sourceId,seed,label,policy,runId,cap,frames,status}));
   }
   const api={parseTrace,MAX_BYTES,MAX_ROWS,MAX_TRACKS,MAX_TURNS};
   root.KevTrace=api;
   if (typeof module !== 'undefined' && module.exports) module.exports=api;
 })(typeof globalThis==='object'?globalThis:this);
+
+/* Local run bundles: enumerate filenames first, read only an explicitly selected run. */
+(function (root) {
+  'use strict';
+  const trace = root.KevTrace || (typeof require === 'function' ? require('./parser.js') : null);
+  const MAX_METADATA_BYTES = 1024 * 1024;
+  const SUMMARY = /(^|[-_.])(benchmark|bench|summary|progress|timing|metrics|train|dev|loss|report|lock)([-_.]|$)/;
+  const obj = x => x !== null && typeof x === 'object' && !Array.isArray(x);
+  const given = x => x !== null && x !== undefined;
+  const pathOf = f => String(f.webkitRelativePath || f.name || '未命名文件').replaceAll('\\', '/');
+  const basename = p => p.split('/').at(-1);
+  const dirname = p => p.includes('/') ? p.slice(0, p.lastIndexOf('/')) : '';
+  const isCompanion = f => /^(run|result)\.json$/i.test(basename(pathOf(f)));
+  const isSummary = f => isCompanion(f) || SUMMARY.test(basename(pathOf(f)).toLowerCase());
+  const sizeOK = (f, limit) => Number.isSafeInteger(f.size) && f.size > 0 && f.size <= limit;
+  const errorAt = (file, message) => new Error('「' + pathOf(file) + '」：' + message);
+  function isTraceCandidate(file) {
+    const p = pathOf(file).toLowerCase(), pieces = p.split('/'), name = pieces.at(-1);
+    if (!/\.(json|jsonl|ndjson)$/.test(name) || isSummary(file)) return false;
+    if (/(^|[-_.])(moves?|traces?|replays?|events?|gameplay|games?)([-_.]|$)/.test(name)) return true;
+    const stem = name.replace(/\.(json|jsonl|ndjson)$/, '');
+    if (pieces.slice(0, -1).includes('traces') && /^(d4|wide|stock|[a-z0-9]+[-_][a-z0-9_-]+)$/.test(stem)) return true;
+    return pieces.slice(0, -1).includes('live') && /^[0-9a-f]{32}$/.test(stem);
+  }
+  function describeFiles(input, {direct = false} = {}) {
+    const files = Array.from(input), dirs = new Map();
+    for (const file of files) {
+      const dir = dirname(pathOf(file));
+      if (!dirs.has(dir)) dirs.set(dir, {traces: [], results: [], runs: []});
+      const group = dirs.get(dir), name = basename(pathOf(file)).toLowerCase();
+      if (name === 'result.json') group.results.push(file);
+      else if (name === 'run.json') group.runs.push(file);
+      else if (direct ? /\.(json|jsonl|ndjson)$/i.test(name) && !isSummary(file) : isTraceCandidate(file)) group.traces.push(file);
+    }
+    return [...dirs.values()].flatMap(group => group.traces.map(file => {
+      const resultFile = group.results[0] || null, runFile = group.runs[0] || null;
+      const companions = [resultFile, runFile].filter(Boolean);
+      const ambiguous = companions.length && (group.traces.length > 1 || group.results.length > 1 || group.runs.length > 1);
+      const bad = !sizeOK(file, trace.MAX_BYTES) ? file : companions.find(f => !sizeOK(f, MAX_METADATA_BYTES));
+      const limit = bad === file ? trace.MAX_BYTES : MAX_METADATA_BYTES;
+      const disabledReason = bad ? pathOf(bad) + ' 为空或超过 ' + (limit / 1048576) + ' MiB 上限' : '';
+      return {file, resultFile, runFile, path: pathOf(file),
+        bytes: [file, ...companions].reduce((sum, f) => sum + (Number.isSafeInteger(f.size) && f.size >= 0 ? f.size : 0), 0),
+        disabled: Boolean(bad), disabledReason,
+        error: ambiguous ? '同目录存在多份记录或同名摘要，无法唯一关联；请分别选择每次运行的文件夹或只导入逐步记录。' : null};
+    }));
+  }
+  async function readText(file, maxBytes) {
+    if (!sizeOK(file, maxBytes)) throw errorAt(file, '文件为空或超过 ' + (maxBytes / 1048576) + ' MiB 上限');
+    let text;
+    try { text = await file.text(); } catch (_) { throw errorAt(file, '无法读取本地文件'); }
+    if (typeof text !== 'string' || text.length > maxBytes || new TextEncoder().encode(text).byteLength > maxBytes)
+      throw errorAt(file, '文件内容超过 ' + (maxBytes / 1048576) + ' MiB 上限');
+    return text;
+  }
+  async function readObject(file) {
+    const text = await readText(file, MAX_METADATA_BYTES);
+    let value;
+    try { value = JSON.parse(text.replace(/^\uFEFF/, '')); } catch (_) { throw errorAt(file, '摘要不是完整 JSON'); }
+    if (!obj(value)) throw errorAt(file, '摘要必须是 JSON 对象');
+    return value;
+  }
+  function label(value, file, field) {
+    if (!given(value)) return null;
+    if (typeof value !== 'string' || !value.trim() || value.length > 160 || /[\x00-\x1f\x7f]/.test(value))
+      throw errorAt(file, field + ' 必须是非空短文本');
+    return value.trim();
+  }
+  function hash(value, file, field) {
+    if (!given(value)) return null;
+    if (typeof value !== 'string' || !/^[a-f\d]{64}$/i.test(value)) throw errorAt(file, field + ' 必须是 SHA-256 指纹');
+    return value.toLowerCase();
+  }
+  function cap(value, file) {
+    if (!given(value)) return null;
+    if (!Number.isSafeInteger(value) || value < 1 || value > trace.MAX_TURNS) throw errorAt(file, '无效步数上限');
+    return value;
+  }
+  function localRef(value, file, field) {
+    if (!given(value)) return null;
+    if (typeof value !== 'string' || !value || /[\x00-\x1f\x7f]/.test(value)) throw errorAt(file, field + ' 必须是同目录相对文件名');
+    const normalized = value.replaceAll('\\', '/').replace(/^\.\//, '');
+    if (normalized.includes('/') || normalized === '.' || normalized === '..' || normalized.includes(':'))
+      throw errorAt(file, field + ' 只支持本次运行同目录中的文件');
+    return normalized;
+  }
+  const seedKey = seed => JSON.stringify(seed);
+  function validateRun(run, entry, games) {
+    if (!run) return {title: null, headSha: null, device: null, cap: null};
+    const file = entry.runFile;
+    if (run.schema_version !== 1 || run.kind !== 'play') throw errorAt(file, '仅支持 schema_version=1、kind=play 的运行清单');
+    if (new Set(games.map(g => seedKey(g.seed))).size !== games.length)
+      throw errorAt(file, '同一种子包含多条策略轨道，无法唯一关联清单');
+    const runId = label(run.run_id, file, 'run_id');
+    if (runId && games.some(g => given(g.runId) && g.runId !== runId)) throw errorAt(file, '运行编号与逐步记录冲突');
+    if (given(run.files) && !obj(run.files)) throw errorAt(file, 'files 必须是对象');
+    for (const [key, target] of [['moves', entry.file], ['result', entry.resultFile]]) {
+      const ref = localRef(run.files?.[key], file, 'files.' + key);
+      if (ref && target && ref !== basename(pathOf(target))) throw errorAt(file, 'files.' + key + ' 与所选文件不一致');
+    }
+    if (given(run.model) && !obj(run.model)) throw errorAt(file, 'model 必须是对象');
+    const model = run.model || {};
+    for (const key of ['base_weights_sha256', 'adapter_sha256']) hash(model[key], file, 'model.' + key);
+    const headSha = hash(model.head_sha256, file, 'model.head_sha256');
+    const title = label(run.variant, file, 'variant') || label(run.label, file, 'label') || label(model.profile, file, 'model.profile');
+    const device = label(run.device, file, 'device'), limit = cap(run.max_moves_per_game, file);
+    if (given(run.seeds)) {
+      if (!Array.isArray(run.seeds)) throw errorAt(file, 'seeds 必须是数组');
+      if (run.seeds.length) {
+        const expected = new Set(games.map(g => seedKey(g.seed))), reported = new Set(run.seeds.map(seedKey));
+        if (reported.size !== run.seeds.length || expected.size !== reported.size || [...expected].some(k => !reported.has(k)))
+          throw errorAt(file, '清单种子与逐步记录不一致');
+      }
+    }
+    if (limit && games.some(g => given(g.cap) && g.cap !== limit)) throw errorAt(file, '步数上限与逐步记录冲突');
+    if (limit && games.some(g => g.frames.at(-1).p > limit)) throw errorAt(file, '记录步数超过清单上限');
+    if (limit && games.some(g => g.status === 'cap' && g.frames.at(-1).p !== limit)) throw errorAt(file, '结束步数与清单上限冲突');
+    return {title, headSha, device, cap: limit};
+  }
+  function reconcile(result, entry, games, info) {
+    if (!result) return {games, headSha: info.headSha, device: info.device};
+    const file = entry.resultFile;
+    const headSha = hash(result.checkpoint_head_sha256, file, 'checkpoint_head_sha256');
+    const device = label(result.device, file, 'device'), limit = cap(result.cap, file);
+    if (headSha && info.headSha && headSha !== info.headSha) throw errorAt(file, '检查点指纹与运行清单冲突');
+    if (device && info.device && device !== info.device) throw errorAt(file, '设备与运行清单冲突');
+    if (limit && info.cap && limit !== info.cap) throw errorAt(file, '步数上限与运行清单冲突');
+    if (!Array.isArray(result.games) || result.games.length !== games.length) throw errorAt(file, '摘要对局数与逐步记录不一致');
+    const bySeed = new Map();
+    for (const row of result.games) {
+      if (!obj(row)) throw errorAt(file, 'games 中的每局必须为对象');
+      const key = seedKey(row.seed);
+      if (bySeed.has(key)) throw errorAt(file, '摘要含重复种子，无法唯一关联');
+      bySeed.set(key, row);
+    }
+    const seen = new Set();
+    const merged = games.map(g => {
+      const key = seedKey(g.seed), row = bySeed.get(key), end = g.frames.at(-1);
+      if (seen.has(key)) throw errorAt(file, '同一种子包含多条策略轨道，无法唯一关联摘要');
+      seen.add(key);
+      if (!row || row.turn !== end.p || row.score !== end.s || row.tile !== end.m)
+        throw errorAt(file, '种子 ' + String(g.seed) + ' 的末步、分数或最大方块与逐步记录不一致');
+      if (!['terminal', 'cap', 'stopped'].includes(row.stop)) throw errorAt(file, '种子 ' + String(g.seed) + ' 缺少有效结束原因');
+      const terminal = g.status === 'terminal';
+      if ((row.stop === 'terminal') !== terminal) throw errorAt(file, '种子 ' + String(g.seed) + ' 的结束原因与棋盘冲突');
+      if (g.status !== 'incomplete' && row.stop !== g.status) throw errorAt(file, '种子 ' + String(g.seed) + ' 的结束原因与逐步记录冲突');
+      const maximum = limit || info.cap;
+      if (maximum && given(g.cap) && g.cap !== maximum) throw errorAt(file, '种子 ' + String(g.seed) + ' 的步数上限与逐步记录冲突');
+      if (maximum && end.p > maximum) throw errorAt(file, '种子 ' + String(g.seed) + ' 的步数超过摘要上限');
+      if (row.stop === 'cap' && (!maximum || end.p !== maximum)) throw errorAt(file, '种子 ' + String(g.seed) + ' 的结束步数不是已报告上限');
+      return {...g, status: row.stop};
+    });
+    return {games: merged, headSha: headSha || info.headSha, device: device || info.device};
+  }
+  async function loadRun(entry) {
+    if (entry.error) throw errorAt(entry.file, entry.error);
+    const raw = await readText(entry.file, trace.MAX_BYTES);
+    let games;
+    try { games = trace.parseTrace(raw, pathOf(entry.file)); }
+    catch (error) { throw errorAt(entry.file, String(error.message || error)); }
+    const run = entry.runFile ? await readObject(entry.runFile) : null;
+    const result = entry.resultFile ? await readObject(entry.resultFile) : null;
+    const info = validateRun(run, entry, games), resolved = reconcile(result, entry, games, info);
+    const parent = basename(dirname(pathOf(entry.file)));
+    const title = info.title || parent || (games.length === 1 && games[0].policy !== 'native' ? games[0].label : null) || basename(pathOf(entry.file));
+    return {path: pathOf(entry.file), title, headSha: resolved.headSha, device: resolved.device,
+      games: resolved.games.map(g => ({...g, runTitle: title, headSha: resolved.headSha, device: resolved.device}))};
+  }
+  const api = {pathOf, isTraceCandidate, describeFiles, loadRun, MAX_METADATA_BYTES};
+  root.KevRuns = api;
+  if (typeof module !== 'undefined' && module.exports) module.exports = api;
+})(typeof globalThis === 'object' ? globalThis : this);
 </script>
 <script>'use strict';
 const $=id=>document.getElementById(id);
@@ -438,7 +622,7 @@ const seek=$('seek'),play=$('play'),prev=$('prev'),next=$('next'),speed=$('speed
 const turnText=$('turn-output'),ticks=$('ticks'),divergence=$('jump-divergence');
 const names={up:['↑','向上'],down:['↓','向下'],left:['←','向左'],right:['→','向右']};
 const fmt=new Intl.NumberFormat('zh-CN');
-const words={terminal:'自然终局',cap:'步数到限',stopped:'已手动停止',incomplete:'记录不完整'};
+const words={terminal:'自然终局',cap:'步数到限',stopped:'已手动停止',incomplete:'结束原因未知'};
 const policyNames={canonical:'标准选项',fixed:'固定槽位',identity:'原始棋盘',d4:'八方向投票',v2:'V2',hard:'V3-hard',greedy:'贪心参考',candidate:'候选版本',native:'原生模型',frozen_v2:'冻结 V2',official_kev_0_8b:'官方 Kev 0.8B'};
 const MAX_FILES=8, MAX_TOTAL_BYTES=48*1024*1024, MAX_TOTAL_GAMES=256, MAX_TOTAL_FRAMES=100000;
 let groups=new Map(),match={},turn=0,maxTurn=0,timer=null,playing=false,cut=null,loadId=0;
@@ -448,7 +632,7 @@ for(const p of document.querySelectorAll('.panel')){
  const nodes=Array.from({length:16},()=>{
   const t=document.createElement('div');t.className='tile';t.setAttribute('aria-hidden','true');b.append(t);return t;
  });
- panels[p.dataset.slot]={element:p,nodes,board:b,title:get('h2'),source:get('.panel-source'),status:get('.status'),scoreLabel:get('.score-label'),score:get('.score'),moveLabel:get('.move-label'),move:get('.move-name'),arrow:get('.arrow'),best:get('.best'),note:get('.decision-note'),final:get('.final')};
+ panels[p.dataset.slot]={element:p,nodes,board:b,title:get('h2'),source:get('.panel-source'),meta:get('.run-meta'),status:get('.status'),scoreLabel:get('.score-label'),score:get('.score'),moveLabel:get('.move-label'),move:get('.move-name'),arrow:get('.arrow'),best:get('.best'),note:get('.decision-note'),final:get('.final')};
 }
 function options(select,values,chosen){
  select.replaceChildren(...values.map(([key,text])=>{
@@ -459,9 +643,10 @@ function options(select,values,chosen){
 const eq=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
 const maxP=g=>g.frames.at(-1).p;
 const frame=(g,p)=>g.frames[Math.min(p,maxP(g))];
-const revealFile=g=>'文件 '+g.sourceOrder+' · '+(g.displayFile||g.file);
-const titleOf=g=>(Object.hasOwn(policyNames,g.policy)?policyNames[g.policy]:null)||g.label||g.policy||'原生模型';
-const optionName=g=>revealFile(g)+' · '+titleOf(g);
+const revealFile=g=>'运行 '+g.sourceOrder+' · '+(g.displayFile||g.file);
+const policyTitle=g=>(Object.hasOwn(policyNames,g.policy)?policyNames[g.policy]:null)||g.label||g.policy||'原生模型';
+const titleOf=g=>g.runTitle?(g.policy==='native'||g.runTitle===policyTitle(g)?g.runTitle:g.runTitle+' · '+policyTitle(g)):policyTitle(g);
+const optionName=g=>titleOf(g)+' · '+revealFile(g);
 function putPanel(key){
  const g=match[key], refs=panels[key];
  refs.element.hidden=!g;
@@ -469,6 +654,9 @@ function putPanel(key){
  const end=maxP(g),shown=Math.min(turn,end),f=frame(g,turn),frozen=turn>end;
  const action=f.a,spawn=f.n,board=f.b;
  refs.title.textContent=titleOf(g);refs.source.textContent=revealFile(g);
+ const identity=[g.device?'设备 '+g.device:'',g.headSha?'头指纹 '+g.headSha.slice(0,12):''].filter(Boolean);
+ refs.meta.hidden=!identity.length;refs.meta.textContent=identity.join(' · ');
+ refs.meta.title=g.headSha?'日志报告的检查点 SHA-256：'+g.headSha:'';
  for(let i=0;i<16;i++){
   const tile=refs.nodes[i];tile.dataset.value=board[i];tile.textContent=board[i]||'';
   const fresh=i===spawn&&!frozen;tile.classList.toggle('spawn',fresh);
@@ -485,7 +673,7 @@ function putPanel(key){
  refs.best.textContent=f.m;
  refs.final.textContent='第 '+end+' 步 · '+fmt.format(g.frames.at(-1).s)+' 分 · '+words[g.status];
  refs.note.textContent=frozen?'此侧记录止于第 '+end+' 步，棋盘保持不变。':
- g.status==='incomplete'&&shown===end?'文件没有终局或截断标记；未补写后续走法。':
+ g.status==='incomplete'&&shown===end?'仍有合法动作；没有匹配的结束摘要或标记，结束原因未知。':
  action?(f.g?'本步合并 +'+fmt.format(f.g)+' 分':'本步无合并得分'):'等待选择下一步。';
 }
 function draw(){
@@ -690,34 +878,44 @@ function chooseSeed(){
 function importMessage(text,error=false){
  const el=$('import-status');el.dataset.error=String(error);el.textContent=text;
 }
+function setImportExpanded(expanded){
+ $('import-tools').hidden=!expanded;
+ $('import-panel').dataset.collapsed=String(!expanded);
+ $('toggle-import').hidden=!groups.size;
+ $('toggle-import').setAttribute('aria-expanded',String(expanded));
+ $('toggle-import').textContent=expanded?'收起文件列表':'更换记录';
+}
+function importError(error){
+ setImportExpanded(true);
+ importMessage(String(error.message||error)+(groups.size?' 已保留上一次成功导入的回放。':''),true);
+}
 async function importFiles(files){
  if(!files.length)return;
+ try{await importRuns(KevRuns.describeFiles(files,{direct:true}))}
+ catch(error){++loadId;$('pick').disabled=false;$('pick-folder').disabled=false;importError(error);updateFolderSelection()}
+}
+async function importRuns(entries){
  const my=++loadId;
- const fileMax=Math.min(KevTrace.MAX_BYTES||25*1024*1024,25*1024*1024);
+ stop();
  $('pick').disabled=true; $('pick-folder').disabled=true; $('open-folder-files').disabled=true;
- importMessage('正在本地读取 '+files.length+' 个文件…');
+ importMessage('正在本地读取 '+entries.length+' 次运行…');
  try{
-  if(files.length>MAX_FILES||files.reduce((sum,f)=>sum+f.size,0)>MAX_TOTAL_BYTES)
-   throw Error('可一次导入最多 8 个文件，总大小不超过 48 MiB。');
-  if(files.some(f=>f.size===0||f.size>fileMax))
-   throw Error('有空文件，或单个文件超过 '+Math.floor(fileMax/1048576)+' MiB。没有读取文件内容。');
+  if(!entries.length)throw Error('没有找到逐步日志；摘要不能单独回放。请选择日志或对应运行文件夹。');
+  if(entries.length>MAX_FILES||entries.reduce((sum,e)=>sum+e.bytes,0)>MAX_TOTAL_BYTES)
+   throw Error('可一次导入最多 8 次运行，含摘要总大小不超过 48 MiB。');
+  const unavailable=entries.find(e=>e.disabled);
+  if(unavailable)throw Error('「'+unavailable.path+'」：'+unavailable.disabledReason);
   const staged=new Map();let count=0,totalFrames=0;
-  for(const [i,f] of files.entries()){
+  for(const [i,entry] of entries.entries()){
    if(my!==loadId)return;
-   let games;
-   const readable=f.name||('未命名文件 '+(i+1));
-   try{
-    const raw=await f.text();
-    if(my!==loadId)return;
-    games=KevTrace.parseTrace(raw,readable);
-   }catch(e){throw Error('「'+readable+'」：'+String(e.message||e).slice(0,220));}
+   const {games}=await KevRuns.loadRun(entry);
+   if(my!==loadId)return;
    for(const [j,g] of games.entries()){
     if(++count>MAX_TOTAL_GAMES||(totalFrames+=g.frames.length)>MAX_TOTAL_FRAMES)
      throw Error('本次对局数或帧数超过页面上限；请选择更少的结果文件。');
     const group=String(g.seed);
     if(!staged.has(group))staged.set(group,[]);
-    const displayFile=f.webkitRelativePath?f.webkitRelativePath.slice(0,300):null;
-    staged.get(group).push({...g,displayFile,uid:'file-'+i+'-game-'+j,sourceOrder:i+1});
+    staged.get(group).push({...g,displayFile:entry.path,uid:'file-'+i+'-game-'+j,sourceOrder:i+1});
    }
   }
   if(my!==loadId)return;
@@ -728,14 +926,17 @@ async function importFiles(files){
   options(seedSelect,seedKeys.map(k=>[k,k+' · '+groups.get(k).length+' 局']),preferred);
   $('empty').hidden=true;$('replay').hidden=false;
   chooseSeed();
-  importMessage('已读取 '+files.length+' 个文件 · '+count+' 局 · '+groups.size+' 个种子。文件未上传。');
+  importMessage('已载入 '+entries.length+' 次运行 · '+count+' 局 · '+groups.size+' 个种子。文件未上传。');
+  setImportExpanded(false);$('toggle-import').focus();
  }catch(e){
-  if(my===loadId)importMessage(String(e.message||e)+(groups.size?' 已保留上一次成功导入的回放。':''),true);
+  if(my===loadId)importError(e);
  }finally{
   if(my===loadId){$('pick').disabled=false;$('pick-folder').disabled=false;updateFolderSelection()}
  }
 }
 const drop=$('import-panel'),fileInput=$('file-input');
+setImportExpanded(true);
+$('toggle-import').addEventListener('click',()=>setImportExpanded($('import-tools').hidden));
 $('pick').addEventListener('click',()=>fileInput.click());
 fileInput.addEventListener('change',()=>{
  const files=Array.from(fileInput.files||[]);fileInput.value='';importFiles(files);
@@ -743,45 +944,43 @@ fileInput.addEventListener('change',()=>{
 const folderInput=$('folder-input'),pickFolder=$('pick-folder'),openFolder=$('open-folder-files');
 const folderSupported='webkitdirectory' in folderInput;
 const fDate=new Intl.DateTimeFormat('zh-CN',{dateStyle:'short',timeStyle:'short'});
-const fPath=f=>f.webkitRelativePath||f.name||'';
-const MAX_CANDIDATES=120;
-let folderRows=[];
-function likelyTrace(f){
- const path=fPath(f).replaceAll('\\','/').toLowerCase();
- const pieces=path.split('/'), name=pieces.at(-1);
- if(!/\.(jsonl|ndjson)$/.test(name) || /(^|[-_.])(benchmark|bench|summary|progress|timing|metrics|train|dev|loss|report|lock)([-_.]|$)/.test(name))return false;
- if(/(^|[-_.])(moves?|traces?|replays?|events?|gameplay|games?)([-_.]|$)/.test(name))return true;
- const stem=name.replace(/\.(jsonl|ndjson)$/,'');
- if(pieces.slice(0,-1).includes('traces')&&/^(d4|wide|stock|[a-z0-9]+[-_][a-z0-9_-]+)$/.test(stem))return true;
- return pieces.slice(0,-1).includes('live')&&/^[0-9a-f]{32}$/.test(stem);
-}
+const PAGE_SIZE=120;
+let folderRows=[],visibleCandidates=PAGE_SIZE;
 function updateFolderSelection(){
- const selected=folderRows.filter(x=>x.box.checked);
- const bytes=selected.reduce((sum,x)=>sum+x.file.size,0);
+ const selected=folderRows.filter(x=>x.checked);
+ const bytes=selected.reduce((sum,x)=>sum+x.entry.bytes,0);
  const valid=selected.length<=MAX_FILES&&bytes<=MAX_TOTAL_BYTES;
  openFolder.disabled=!selected.length||!valid||$('pick').disabled;
  $('folder-selection').textContent=selected.length
-  ?'已选 '+selected.length+' 个 · '+(bytes/1048576).toFixed(2)+' MiB'+(valid?'':'，最多 '+MAX_FILES+' 个、共 48 MiB')
+  ?'已选 '+selected.length+' 次运行 · '+(bytes/1048576).toFixed(2)+' MiB'+(valid?'':'，最多 '+MAX_FILES+' 次运行、共 48 MiB')
   :'未选择';
 }
 function showFolder(files){
- const matches=Array.from(files).filter(likelyTrace).sort((a,b)=>(b.lastModified||0)-(a.lastModified||0)||fPath(a).localeCompare(fPath(b),'zh-CN',{numeric:true}));
- const limit=Math.min(KevTrace.MAX_BYTES||16*1024*1024,16*1024*1024);
- const rows=[];
- folderRows=matches.slice(0,MAX_CANDIDATES).map(f=>{
+ try{
+  const entries=KevRuns.describeFiles(files).sort((a,b)=>Number(a.disabled)-Number(b.disabled)||(b.file.lastModified||0)-(a.file.lastModified||0)||a.path.localeCompare(b.path,'zh-CN',{numeric:true}));
+  folderRows=entries.map(entry=>({entry,checked:false}));visibleCandidates=PAGE_SIZE;
+  setImportExpanded(true);renderFolder();
+ }catch(error){importError(error)}
+}
+function renderFolder(){
+ const shown=folderRows.slice(0,visibleCandidates);
+ const rows=shown.map(row=>{
+  const {entry}=row,f=entry.file;
   const wrap=document.createElement('label');wrap.className='folder-choice';
-  const box=document.createElement('input');box.type='checkbox';box.disabled=f.size<1||f.size>limit;
+  const box=document.createElement('input');box.type='checkbox';box.disabled=entry.disabled;box.checked=row.checked;
   const span=document.createElement('span'),path=document.createElement('span'),meta=document.createElement('small');
-  path.className='folder-path';path.textContent=fPath(f).slice(0,300);
+  path.className='folder-path';path.textContent=entry.path;
   const time=Number.isFinite(f.lastModified)&&f.lastModified>0&&f.lastModified<=8640000000000000?fDate.format(f.lastModified):'修改时间未记录';
-  meta.className='folder-meta';meta.textContent=(f.size/1048576).toFixed(2)+' MiB · '+time+(box.disabled?' · 文件为空或超出单文件上限':'');
-  span.append(path,meta);wrap.append(box,span);rows.push(wrap);
-  box.addEventListener('change',updateFolderSelection);
-  return {box,file:f};
+  const parts=['日志',entry.resultFile?'结果摘要':'',entry.runFile?'运行信息':''].filter(Boolean).join(' + ');
+  meta.className='folder-meta';meta.textContent=(entry.bytes/1048576).toFixed(2)+' MiB · '+time+' · '+parts+(box.disabled?' · '+entry.disabledReason:'');
+  span.append(path,meta);wrap.append(box,span);
+  box.addEventListener('change',()=>{row.checked=box.checked;updateFolderSelection()});
+  return wrap;
  });
  $('folder-list').replaceChildren(...rows);
  $('folder-results').hidden=false;
- $('folder-summary').textContent=matches.length?'找到 '+matches.length+' 个候选，按修改时间从新到旧。'+(matches.length>MAX_CANDIDATES?'只列出前 '+MAX_CANDIDATES+' 个。':'')+'勾选后才读取内容。':'这个文件夹没有找到常见的对局文件名。可以改用「直接选记录文件」。';
+ $('more-folder-files').hidden=shown.length>=folderRows.length;
+ $('folder-summary').textContent=folderRows.length?'已显示 '+shown.length+' / '+folderRows.length+' 次运行。可导入优先，同类按修改时间从新到旧；勾选后才读取内容。':'这个文件夹没有找到常见的对局文件名。可以改用「直接选记录文件」。';
  updateFolderSelection();
 }
 pickFolder.hidden=!folderSupported;$('folder-help').hidden=!folderSupported;
@@ -792,8 +991,9 @@ folderInput.addEventListener('change',()=>{
  if(files.length)showFolder(files);
 });
 openFolder.addEventListener('click',()=>{
- if(!openFolder.disabled)importFiles(folderRows.filter(x=>x.box.checked).map(x=>x.file));
+ if(!openFolder.disabled)importRuns(folderRows.filter(x=>x.checked).map(x=>x.entry));
 });
+$('more-folder-files').addEventListener('click',()=>{visibleCandidates+=PAGE_SIZE;renderFolder()});
 drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.toggle('dragover',true)});
 drop.addEventListener('dragleave',()=>drop.classList.toggle('dragover',false));
 drop.addEventListener('drop',e=>{

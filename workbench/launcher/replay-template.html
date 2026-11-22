@@ -101,6 +101,11 @@ input[type="range"]::-moz-range-thumb{border:3px solid var(--indigo);background:
 [hidden]{display:none!important}
 header .pill{color:#166655;background:#eaf7f2}
 #import-panel{padding:17px 19px;margin-bottom:17px}
+.import-heading{display:flex;align-items:center;justify-content:space-between;gap:12px}
+#import-tools{margin-top:10px}
+#import-panel[data-collapsed=true]{padding:10px 16px}
+#import-panel[data-collapsed=true] .import-title{font-size:16px}
+#import-panel[data-collapsed=true] #import-status{margin-top:3px}
 .import-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px}
 .import-title{font-size:19px}
 .import-help{font-size:13px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
@@ -129,6 +134,8 @@ header .pill{color:#166655;background:#eaf7f2}
 .same-step[data-mismatch=true]{color:var(--coral)}
 .boards.single{grid-template-columns:minmax(0,650px);justify-content:center}
 .panel-head p{overflow-wrap:anywhere}
+.run-meta{font-size:12px;color:var(--muted);margin:0 0 12px;overflow-wrap:anywhere}
+@media(max-width:520px){.run-meta{font-size:10px;margin-bottom:7px}.import-heading{gap:6px}}
 .panel[data-slot="right"]{--accent:var(--coral);--tone:#fcefea}
 .card{border:1px solid var(--line);border-radius:16px;background:white;box-shadow:0 3px 0 var(--shadow)}
 .blank{padding:34px 24px;text-align:center;color:var(--muted)}
@@ -142,16 +149,19 @@ header .pill{color:#166655;background:#eaf7f2}
 <header><div class="brand"><span class="icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>KEV LAB</div><p class="crumb">模型实验 / 即时回看</p><span class="pill">纯本地 · 不上传</span></header>
 <section class="intro" aria-labelledby="main-title"><div><h1 id="main-title">2048 即时回看</h1><p class="subtitle">选中结果文件，就能回放真实棋局。无需装模型、开服务器或联网。</p></div></section>
 <section class="card" id="import-panel" aria-labelledby="import-title">
-<div class="import-grid"><div><h2 class="import-title" id="import-title">导入本地对局</h2><p class="import-help">测试后，到项目目录的 <code>runs/某次测试/moves.jsonl</code> 找逐步记录；仓库里的旧实验在 <code>experiments/traces/</code>。<code>benchmark.json</code> 只有摘要，不能回放。</p></div>
+<div class="import-heading"><h2 class="import-title" id="import-title">导入本地对局</h2><button type="button" class="picker secondary" id="toggle-import" aria-expanded="true" aria-controls="import-tools" hidden>收起文件列表</button></div>
+<div id="import-tools">
+<div class="import-grid"><div><p class="import-help">选择 <code>runs/</code> 中的一次或多次运行；也可打开 <code>experiments/traces/</code> 中的历史记录。直接选文件时，可一起选择日志及同目录的 <code>result.json</code>、<code>run.json</code>。</p></div>
 <div class="import-actions"><button type="button" class="picker secondary" id="pick-folder" aria-describedby="folder-help" hidden>先选文件夹</button><button type="button" class="picker" id="pick" aria-describedby="import-status">直接选记录文件</button></div>
 <input id="file-input" type="file" accept=".jsonl,.json,.ndjson,application/json,application/x-ndjson" multiple tabindex="-1" aria-label="选择对局文件">
 <input id="folder-input" type="file" webkitdirectory multiple tabindex="-1" aria-label="选择结果文件夹"></div>
-<p id="folder-help" class="folder-help" hidden>可以先选 <code>runs/</code> 或 <code>experiments/traces/</code>，页面列出其中可能是对局的文件。只读取你勾选的记录。</p>
+<p id="folder-help" class="folder-help" hidden>先列出候选，不读取内容；打开时只读取勾选的日志及其同目录摘要。摘要与日志一致后才关联，单独的摘要不能回放。</p>
 <section id="folder-results" class="folder-results" aria-labelledby="folder-heading" hidden>
-<h3 id="folder-heading">此文件夹中的可能对局记录</h3><p id="folder-summary" class="folder-help" role="status"></p>
+<h3 id="folder-heading">此文件夹中的运行</h3><p id="folder-summary" class="folder-help" role="status"></p>
 <div id="folder-list" class="folder-list"></div>
-<div class="folder-footer"><button type="button" class="picker" id="open-folder-files" disabled>打开所选记录</button><span id="folder-selection">未选择</span></div>
+<div class="folder-footer"><button type="button" class="picker" id="open-folder-files" disabled>打开所选记录</button><button type="button" class="picker secondary" id="more-folder-files" hidden>显示更多</button><span id="folder-selection">未选择</span></div>
 </section>
+</div>
 <p id="import-status" role="status">文件只在当前浏览器里读取。可同时选中两次测试的逐步记录。</p>
 </section>
 <section class="card blank" id="empty"><h2>还没有导入棋局</h2><p>选一个文件可播放单局；导入相同种子下的两个版本，可并排比较。</p></section>
@@ -165,12 +175,14 @@ header .pill{color:#166655;background:#eaf7f2}
 <div class="boards" id="boards">
 <article class="panel" data-slot="left">
 <div class="panel-head"><div><h2>左侧</h2><p class="panel-source"></p></div><span class="pill status"></span></div>
+<p class="run-meta" hidden></p>
 <div class="panel-main">
 <div class="board" role="img"></div>
 <dl class="stats"><div class="metric"><dt class="score-label"></dt><dd class="score"></dd></div><div class="metric move"><dt class="move-label"></dt><dd><span class="arrow" aria-hidden="true"></span><span class="move-name"></span></dd></div><div class="metric tile-best"><dt>最大方块</dt><dd class="best"></dd></div></dl>
 </div><p class="decision-note"></p><div class="panel-foot"><span>记录终点</span><span class="final"></span></div>
 </article><article class="panel" data-slot="right">
 <div class="panel-head"><div><h2>右侧</h2><p class="panel-source"></p></div><span class="pill status"></span></div>
+<p class="run-meta" hidden></p>
 <div class="panel-main">
 <div class="board" role="img"></div>
 <dl class="stats"><div class="metric"><dt class="score-label"></dt><dd class="score"></dd></div><div class="metric move"><dt class="move-label"></dt><dd><span class="arrow" aria-hidden="true"></span><span class="move-name"></span></dd></div><div class="metric tile-best"><dt>最大方块</dt><dd class="best"></dd></div></dl>
