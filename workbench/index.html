@@ -1,0 +1,925 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; script-src 'unsafe-inline'; style-src 'unsafe-inline'; connect-src 'self'; form-action 'none'; base-uri 'none'">
+<title>Kev 2048 本地工作台</title>
+<style>
+:root{--ink:#132238;--muted:#526882;--line:#dee6ef;--indigo:#4f46ce;--coral:#ae4132;--shadow:#dce6f2;--card:#fff}
+*,*::before,*::after{box-sizing:border-box}
+body{margin:0;min-height:100vh;color:var(--ink);background:linear-gradient(180deg,#f7faff,#edf3fa);font:16px/1.5 "Segoe UI","Noto Sans CJK SC","Microsoft Yahei","PingFang SC",sans-serif}
+main{width:min(100% - 48px,1312px);margin:auto}
+button,select,input{font:inherit}
+button,select{cursor:pointer}
+:focus-visible{outline:3px solid #7469f4;outline-offset:3px}
+header{min-height:89px;display:flex;align-items:center;border-bottom:1px solid var(--line);gap:20px}
+.brand{display:flex;align-items:center;gap:11px;font:700 16px/1.1 "Segoe UI",sans-serif;letter-spacing:2px;white-space:nowrap}
+.icon{display:grid;grid-template-columns:repeat(2,11px);gap:3px}
+.icon i{width:11px;height:11px;border-radius:3px;background:#5b50e5}
+.icon i:nth-child(2){background:#9b94f4}
+.icon i:nth-child(3){background:#c4befc}
+.crumb{color:var(--muted);font-size:14px;padding-left:16px;border-left:1px solid var(--line)}
+.pill{border-radius:999px;padding:5px 11px;font-size:13px;font-weight:700;background:#e9eff8;color:#455a76}
+header .pill{margin-left:auto;white-space:nowrap}
+.intro{display:flex;align-items:center;justify-content:space-between;gap:14px;padding:24px 0 23px}
+h1,h2,p{margin:0}
+h1{font-position:normal;font-size:clamp(28px,4vw,43px);letter-spacing:-.6px;line-height:1.12}
+.subtitle{margin-top:8px;color:var(--muted)}
+.seed{display:block;padding:9px 16px;background:white;border:1px solid var(--line);border-radius:15px;min-width:205px}
+.seed span{display:block;font-size:12px;font-weight:700;color:var(--muted)}
+.seed select{border:0;padding:2px 24px 2px 0;background:transparent;color:var(--ink);font-weight:700;font-variant-numeric:tabular-nums;width:100%}
+.boards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:32px}
+.panel{--accent:var(--indigo);--tone:#eeecff;min-width:0;border:1px solid var(--line);border-radius:23px;background:var(--card);padding:22px 23px 15px;box-shadow:0 4px 0 var(--shadow)}
+.panel[data-policy="fixed"]{--accent:var(--coral);--tone:#fcefea}
+.panel-head{display:flex;align-items:flex-start;justify-content:space-between;gap:8px;margin-bottom:20px}
+.panel h2{font-size:clamp(19px,2.4vw,27px);line-height:1.23;display:flex;align-items:center;gap:8px;overflow-wrap:anywhere}
+.panel h2::before{content:"";width:10px;height:10px;border-radius:50%;background:var(--accent);flex-shrink:0}
+.panel-head p{color:var(--muted);font-size:13px;margin-top:6px}
+.status{color:var(--accent);background:var(--tone);flex-shrink:0;white-space:nowrap}
+.status::before{content:"";display:inline-block;width:7px;height:7px;border-radius:50%;background:currentColor;margin-right:6px;vertical-align:1px}
+.panel-main{display:grid;grid-template-columns:minmax(0,368fr) minmax(0,202fr);gap:20px;align-items:stretch}
+.board{background:#d3ddeb;border-radius:18px;padding:9px;aspect-ratio:1;display:grid;grid-template-columns:repeat(4,minmax(0,1fr));grid-template-rows:repeat(4,minmax(0,1fr));gap:6px;overflow:hidden;container-type:inline-size}
+.tile{position:relative;border-radius:10px;display:grid;place-items:center;font-family:"Segoe UI",system-ui,sans-serif;font-size:9.1cqi;font-weight:750;background:#e3eaf2;color:#2d435a;min-width:0;line-height:1}
+.tile.spawn{outline:3px solid var(--accent);outline-offset:-3px}
+.tile.spawn::after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;top:7px;right:7px;background:var(--accent)}
+.tile[data-value="2"]{background:#fafcff}.tile[data-value="4"]{background:#edf0ff;color:#403d8e}.tile[data-value="8"]{background:#d9e4ff;color:#203e7d}.tile[data-value="16"]{background:#a7bff3;color:#192950}.tile[data-value="32"]{background:#5366ad;color:#fff}.tile[data-value="64"]{background:#333580;color:#fff}.tile[data-value="128"]{background:#332c72;color:#fff}.tile[data-value="256"]{background:#292259;color:#fff}
+.stats{display:grid;grid-template-rows:repeat(3,minmax(0,auto));align-content:stretch;gap:5px;background:#f2f6fb;border-radius:15px;padding:15px 16px 12px;min-width:0;margin:0}
+.metric{min-width:0}
+.metric dt{margin:0 0 5px;color:var(--muted);font-size:14px;font-weight:650}
+.metric dd{margin:0;font-family:"Segoe UI","Noto Sans CJK SC","Microsoft Yahei",sans-serif;font-variant-numeric:tabular-nums;line-height:1.1;font-size:clamp(20px,3vw,42px);font-weight:750}
+.metric.move{border-top:1px solid var(--line);padding-top:14px}
+.metric.move dd{background:var(--tone);color:var(--accent);border-radius:10px;padding:10px;font-size:16px;min-height:40px;display:flex;align-items:center;gap:10px}
+.metric.move .arrow{font-size:23px;line-height:1}
+.metric.tile-best dd{font-size:clamp(18px,2.5vw,30px)}
+.decision-note{color:var(--muted);font-size:13px;margin-top:9px;min-height:20px}.panel-foot{border-top:1px solid var(--line);padding-top:13px;margin-top:18px;display:flex;flex-wrap:wrap;justify-content:space-between;gap:3px 10px;font-size:14px;font-weight:700}
+.panel-foot span:first-child{color:var(--muted)}
+.timeline{margin-top:27px;padding:21px 25px 9px;border:1px solid var(--line);border-radius:22px;background:#fff;box-shadow:0 4px 0 var(--shadow)}
+.timeline-main{display:grid;grid-template-columns:245px minmax(0,1fr);gap:34px;align-items:stretch}
+.timeline h2{font-size:21px;line-height:1.2}
+.timeline .hint{margin-top:5px;font-size:13px;color:var(--muted)}
+.controlbar{display:flex;gap:8px;align-items:center;margin-top:15px}
+.controlbar button{width:45px;height:42px;padding:0;background:#f1f5fa;border:0;border-radius:12px;color:var(--ink);font-weight:700;display:grid;place-items:center;flex-shrink:0}
+.controlbar button:disabled{cursor:not-allowed;opacity:.5}
+.controlbar button:not(:disabled):hover{filter:brightness(.95)}
+.controlbar button svg{width:18px;height:18px}
+.controlbar button.play{background:var(--indigo);color:#fff}
+.controlbar select{border:0;background:#f1f5fa;border-radius:10px;padding:7px 6px;font-size:14px;font-weight:700;max-width:68px;color:var(--ink)}
+.track{border-left:1px solid var(--line);padding-left:31px;min-width:0;display:flex;flex-direction:column;justify-content:space-between}
+.track-top{display:flex;justify-content:space-between;align-items:center;gap:8px}
+.track-top label{font-size:14px;font-weight:700;color:var(--muted)}
+#turn-output{font-size:17px;font-weight:700;white-space:nowrap;font-variant-numeric:tabular-nums}
+input[type="range"]{appearance:none;width:100%;margin:0;background:transparent;height:30px;cursor:pointer;accent-color:var(--indigo)}
+input[type="range"]::-webkit-slider-runnable-track{height:7px;border-radius:15px;background:linear-gradient(to right,var(--indigo) 0 var(--position,0%),#dce6f1 var(--position,0%) 100%)}
+input[type="range"]::-webkit-slider-thumb{appearance:none;border:3px solid var(--indigo);background:#fff;width:19px;height:19px;border-radius:50%;margin-top:-6px}
+input[type="range"]::-moz-range-track{height:7px;border-radius:15px;background:linear-gradient(to right,var(--indigo) 0 var(--position,0%),#dce6f1 var(--position,0%) 100%)}
+input[type="range"]::-moz-range-thumb{border:3px solid var(--indigo);background:#fff;width:15px;height:15px;border-radius:50%}
+.track-range{margin:26px 6px 0;position:relative}
+.tick{position:absolute;top:26px;transform:translateX(-50%);font-size:12px;color:var(--muted);font-variant-numeric:tabular-nums}
+.end-marker{position:absolute;bottom:27px;transform:translateX(-50%);border:0;color:var(--coral);background:#fcefea;font-size:11px;font-weight:700;padding:4px 7px;border-radius:9px;white-space:nowrap}
+.end-marker[hidden]{display:none}
+.jumps{display:flex;gap:7px;flex-wrap:wrap;font-size:12px;margin-top:23px;padding-bottom:3px}
+.jumps button{border:1px solid var(--line);padding:4px 8px;border-radius:8px;background:white;color:var(--muted)}
+.jumps button:hover{border-color:var(--indigo);color:var(--indigo)}
+.legend{margin-top:13px;padding-top:9px;border-top:1px solid var(--line);display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px}
+.legend i{display:inline-block;width:12px;height:12px;border:2px solid var(--indigo);border-radius:3px;vertical-align:-2px;margin-right:6px}
+.page-foot{padding:20px 0;display:flex;gap:10px;justify-content:space-between;color:var(--muted);font-size:12px}
+.page-foot strong{letter-spacing:1.25px;white-space:nowrap}
+@media(max-width:1060px){.boards{gap:18px}.panel{padding:17px}.panel-main{gap:11px}.stats{padding:10px}.metric dt{font-size:12px}.metric.move{padding-top:8px}.metric.move dd{min-height:34px;padding:6px;font-size:14px}}
+@media(max-width:800px){main{width:calc(100% - 32px)}header{min-height:58px}.intro{padding:19px 0}.panel-main{grid-template-columns:1fr}.stats{grid-template-columns:repeat(3,minmax(0,1fr));grid-template-rows:auto;gap:6px;padding:10px;align-items:start}.metric.move{border:0;padding:0}.metric.move dd{min-height:0;padding:3px 4px;gap:4px;white-space:nowrap}.metric.move .arrow{font-size:17px}.metric dt{margin-bottom:4px}.board{max-width:100%}.timeline-main{grid-template-columns:1fr;gap:15px}.track{border-left:0;border-top:1px solid var(--line);padding:12px 0 0}}
+@media(max-width:520px){main{width:calc(100% - 22px)}header{gap:9px;min-height:49px}.brand{font-size:12px;letter-spacing:1.2px;gap:6px}.icon{grid-template-columns:repeat(2,8px);gap:2px}.icon i{width:8px;height:8px;border-radius:2px}.crumb{font-size:11px;padding-left:7px}.pill{font-size:11px;padding:4px 6px}.status::before{width:5px;height:5px;margin-right:3px}.intro{display:block;padding:14px 0}.subtitle{font-size:13px;margin-top:5px}.seed{margin-top:9px;padding:3px 7px;min-width:0;display:inline-flex;gap:5px;align-items:center}.seed span{font-size:10px}.seed select{padding:2px;font-size:12px;width:auto}.boards{gap:8px}.panel{padding:9px 6px 8px;border-radius:12px}.panel-head{display:block;margin-bottom:6px}.panel h2{font-size:15px;gap:5px}.panel h2::before{width:6px;height:6px}.panel-head p{display:none}.status{display:inline-block;margin-top:4px}.panel-main{gap:5px}.board{padding:4px;gap:3px;border-radius:9px}.tile{border-radius:5px;font-size:11.7cqi}.tile.spawn{outline-width:2px;outline-offset:-2px}.tile.spawn::after{width:4px;height:4px;top:4px;right:4px}.stats{padding:5px 4px;gap:3px;border-radius:7px}.metric dt{font-size:10px;line-height:1.12;margin-bottom:5px;min-height:22px}.metric dd,.metric.tile-best dd{font-size:17px}.metric.move dd{font-size:10px;padding:3px 2px;gap:1px}.metric.move .arrow{font-size:12px}.panel-foot{display:block;margin-top:6px;padding-top:6px;font-size:10px}.panel-foot span:first-child{display:block}.timeline{margin-top:12px;padding:11px 10px 7px;border-radius:12px}.timeline h2{font-size:17px}.timeline .hint{font-size:11px}.timeline-main{gap:8px}.controlbar{margin-top:8px}.controlbar button{width:44px;height:44px}.track{padding-top:7px}.track-top label,.jumps{font-size:11px}#turn-output{font-size:14px}.track-range{margin:24px 7px 0}.legend{margin-top:7px;font-size:10px}.legend .shortcuts{display:none}.page-foot{font-size:9px;padding:10px 0}}
+@media(max-width:520px){.decision-note{font-size:10px;line-height:1.25;min-height:26px;margin-top:5px}}
+@media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}}
+/* The semantic grid remains in place underneath the clipped, visual-only layer. */
+.board{position:relative}
+.board.is-sliding>.tile{color:transparent!important;background:#e3eaf2!important;outline:none!important}
+.board.is-sliding>.tile::after{display:none}
+.fx-layer{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+.tile.fx-tile{position:absolute;max-width:none;will-change:transform,opacity}
+
+[hidden]{display:none!important}
+header .pill{color:#166655;background:#eaf7f2}
+#import-panel{padding:17px 19px;margin-bottom:17px}
+.import-grid{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:14px}
+.import-title{font-size:19px}
+.import-help{font-size:13px;color:var(--muted);margin-top:4px;overflow-wrap:anywhere}
+.picker{background:var(--indigo);color:white;border:0;border-radius:11px;padding:10px 14px;font-size:14px;font-weight:700;white-space:nowrap}
+.picker:disabled{opacity:.6;cursor:wait}
+#file-input{position:absolute;width:1px;height:1px;overflow:hidden;clip-path:inset(50%)}
+#import-panel.dragover{outline:2px solid var(--indigo);outline-offset:3px}
+#import-status{font-size:13px;color:var(--muted);margin-top:9px;overflow-wrap:anywhere}
+#import-status[data-error=true]{color:var(--coral)}
+.view-controls{display:grid;grid-template-columns:minmax(114px,.62fr) repeat(2,minmax(120px,1fr));gap:8px;margin:0 0 10px}
+.view-controls label{min-width:0;font-size:12px;font-weight:700;color:var(--muted);background:#fff;border:1px solid var(--line);border-radius:11px;padding:6px 8px}
+.view-controls select{display:block;width:100%;min-width:0;overflow:hidden;text-overflow:ellipsis;border:0;padding:4px;color:var(--ink);background:transparent}
+.same-step{font-size:13px;color:var(--muted);margin:0 0 12px}
+.same-step[data-mismatch=true]{color:var(--coral)}
+.boards.single{grid-template-columns:minmax(0,650px);justify-content:center}
+.panel-head p{overflow-wrap:anywhere}
+.panel[data-slot="right"]{--accent:var(--coral);--tone:#fcefea}
+.card{border:1px solid var(--line);border-radius:16px;background:white;box-shadow:0 3px 0 var(--shadow)}
+.blank{padding:34px 24px;text-align:center;color:var(--muted)}
+.blank h2{color:var(--ink);margin-bottom:4px;font-size:22px}
+.panel-foot{margin-top:10px}
+.decision-note{overflow-wrap:anywhere}
+@media(max-width:600px){.view-controls{grid-template-columns:1fr 1fr}.view-controls label:first-child{grid-column:1/-1}.same-step{font-size:11px}.import-title{font-size:16px}.import-help,#import-status{font-size:11px}#import-panel{padding:11px}.import-grid{gap:8px}.picker{font-size:12px;padding:8px}.blank{padding:24px 12px}.blank h2{font-size:18px}}
+.arcade-nav{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:16px 0 0}
+.arcade-nav button,.monitor-filters button{border:1px solid #dce6f2;border-radius:10px;background:#fff;color:#3e5370;padding:8px 13px;font:inherit;cursor:pointer}
+.arcade-nav button[aria-selected="true"],.monitor-filters button[aria-pressed="true"]{color:#fff;background:var(--indigo);border-color:var(--indigo)}
+.monitor-pane{padding:13px 0 24px}
+.monitor-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:6px 0 12px}
+.monitor-header h1{font-size:clamp(25px,4vw,38px);margin-bottom:5px}
+.monitor-header p,.monitor-meta,.monitor-history{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.monitor-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.monitor-filters button{font-size:13px;padding:6px 10px}
+#monitor-sources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.monitor-card,.monitor-empty{padding:14px;min-width:0;overflow-wrap:anywhere}
+.monitor-empty{grid-column:1/-1;color:var(--muted);font-size:14px}
+.monitor-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.monitor-top h2{font-size:19px;line-height:1.2;margin:0 0 5px}
+.monitor-stage{font-size:14px;font-weight:710;margin:8px 0 6px}
+.pill[data-tone="active"]{background:#e5f5ed;color:#176d55}
+.pill[data-tone="old"]{background:#fff2da;color:#785120}
+.pill[data-tone="error"]{background:#fcece8;color:var(--coral)}
+.monitor-progress{height:9px;width:100%;accent-color:var(--indigo)}
+.monitor-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin:7px 0}
+.monitor-metric{background:#f2f6fb;border-radius:8px;padding:7px 8px}
+.monitor-metric dt{color:var(--muted);font-size:11px}
+.monitor-metric dd{margin:0;font-weight:700;font-size:16px}
+.monitor-card h3{font-size:13px;margin:11px 0 4px}
+.monitor-board{aspect-ratio:1;width:min(100%,190px);display:grid;grid-template:repeat(4,1fr)/repeat(4,1fr);gap:4px;padding:5px;background:#d3ddeb;border-radius:10px}
+.monitor-board .tile{font-size:16px;border-radius:7px}
+.monitor-history{padding-left:1.3em;margin:0}
+.monitor-history li{margin:2px 0}
+@media(max-width:650px){.arcade-nav{margin-top:10px}.arcade-nav button{font-size:13px;padding:6px 9px}.monitor-header p,.monitor-meta,.monitor-history{font-size:11px}#monitor-sources{grid-template-columns:1fr}.monitor-card,.monitor-empty{padding:10px}.monitor-top h2{font-size:17px}}
+</style>
+</head>
+<body><main>
+<header><div class="brand"><span class="icon" aria-hidden="true"><i></i><i></i><i></i><i></i></span>KEV LAB</div><p class="crumb">模型实验 / 本地工作台</p><span class="pill">纯本地 · 不上传</span></header>
+<nav class="arcade-nav" aria-label="工作台模式"><div role="tablist" aria-label="工作台模式">
+<button type="button" role="tab" id="arcade-monitor-tab" aria-selected="true" aria-controls="arcade-monitor-pane">监控总览</button>
+<button type="button" role="tab" id="arcade-review-tab" aria-selected="false" aria-controls="arcade-review-pane" tabindex="-1">即时回看</button>
+</div></nav>
+<section id="arcade-monitor-pane" class="monitor-pane" role="tabpanel" aria-labelledby="arcade-monitor-tab">
+<div class="monitor-header"><div><h1>训练与推理监控</h1><p id="monitor-description">只读查看实际来源的最近进展。</p></div>
+<span class="pill" id="monitor-connection" role="status">尚未联接</span></div>
+<div class="monitor-filters" aria-label="筛选观察来源">
+<button type="button" data-monitor-filter="all" aria-pressed="true">全部</button>
+<button type="button" data-monitor-filter="training" aria-pressed="false">训练</button>
+<button type="button" data-monitor-filter="inference" aria-pressed="false">推理</button>
+<button type="button" data-monitor-filter="benchmark" aria-pressed="false">测速</button>
+</div>
+<div id="monitor-sources"><div class="card monitor-empty">尚未收到观察来源。</div></div>
+</section>
+<div id="arcade-review-pane" role="tabpanel" aria-labelledby="arcade-review-tab" hidden>
+<section class="intro" aria-labelledby="main-title"><div><h1 id="main-title">2048 即时回看</h1><p class="subtitle">选中结果文件，就能回放真实棋局。无需装模型、开服务器或联网。</p></div></section>
+<section class="card" id="import-panel" aria-labelledby="import-title">
+<div class="import-grid"><div><h2 class="import-title" id="import-title">导入本地对局</h2><p class="import-help">选择或拖入一个或多个逐步记录，例如 <code>runs/某次测试/moves.jsonl</code>。<code>benchmark.json</code> 只有摘要，不能回放。</p></div><button type="button" class="picker" id="pick" aria-describedby="import-status">选择结果文件</button><input id="file-input" type="file" accept=".jsonl,.json,application/json,application/x-ndjson" multiple tabindex="-1" aria-label="选择对局文件"></div>
+<p id="import-status" role="status">文件只在当前浏览器里读取。可同时选中两次测试的逐步记录。</p>
+</section>
+<section class="card blank" id="empty"><h2>还没有导入棋局</h2><p>选一个文件可播放单局；导入相同种子下的两个版本，可并排比较。</p></section>
+<section id="replay" hidden aria-label="对局回放">
+<div class="view-controls">
+<label>选择种子 <select id="seed-select" aria-label="选择种子"></select></label>
+<label>左侧版本 <select id="left-select" aria-label="左侧版本"></select></label>
+<label id="right-control">右侧版本 <select id="right-select" aria-label="右侧版本"></select></label>
+</div>
+<p class="same-step" id="comparison">同一步不一定是同一盘面；这里只对齐两局各自的步数。</p>
+<div class="boards" id="boards">
+<article class="panel" data-slot="left">
+<div class="panel-head"><div><h2>左侧</h2><p class="panel-source"></p></div><span class="pill status"></span></div>
+<div class="panel-main">
+<div class="board" role="img"></div>
+<dl class="stats"><div class="metric"><dt class="score-label"></dt><dd class="score"></dd></div><div class="metric move"><dt class="move-label"></dt><dd><span class="arrow" aria-hidden="true"></span><span class="move-name"></span></dd></div><div class="metric tile-best"><dt>最大方块</dt><dd class="best"></dd></div></dl>
+</div><p class="decision-note"></p><div class="panel-foot"><span>记录终点</span><span class="final"></span></div>
+</article><article class="panel" data-slot="right">
+<div class="panel-head"><div><h2>右侧</h2><p class="panel-source"></p></div><span class="pill status"></span></div>
+<div class="panel-main">
+<div class="board" role="img"></div>
+<dl class="stats"><div class="metric"><dt class="score-label"></dt><dd class="score"></dd></div><div class="metric move"><dt class="move-label"></dt><dd><span class="arrow" aria-hidden="true"></span><span class="move-name"></span></dd></div><div class="metric tile-best"><dt>最大方块</dt><dd class="best"></dd></div></dl>
+</div><p class="decision-note"></p><div class="panel-foot"><span>记录终点</span><span class="final"></span></div>
+</article></div>
+<section class="timeline" aria-labelledby="timeline-title">
+<div class="timeline-main">
+<div><h2 id="timeline-title">回放时间轴</h2><p class="hint" id="track-hint">比较时对齐两边的步数</p>
+<div class="controlbar">
+<button type="button" id="prev" aria-label="上一步" title="上一步（←）"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 6l-6 6 6 6"/></svg></button>
+<button type="button" class="play" id="play" aria-label="播放" title="播放或暂停（空格）"><svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l14 8-14 8z"/></svg></button>
+<button type="button" id="next" aria-label="下一步" title="下一步（→）"><svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M9 6l6 6-6 6"/></svg></button>
+<select id="speed" aria-label="播放速度"><option value="0.5">0.5×</option><option value="1" selected>1×</option><option value="2">2×</option><option value="4">4×</option></select>
+</div></div>
+<div class="track"><div class="track-top"><label for="seek">按步回放</label><output id="turn-output" for="seek"></output></div>
+<div class="track-range"><button type="button" class="end-marker" id="marker" hidden></button><input type="range" id="seek" min="0" max="0" step="1" value="0"><div id="ticks" aria-hidden="true"></div></div>
+<div class="jumps"><button type="button" id="jump-start">回到开局</button><button type="button" id="jump-divergence" hidden></button><button type="button" id="jump-end">跳到最后</button></div></div>
+</div>
+<div class="legend"><span><i aria-hidden="true"></i>先滑动、再合并。描边标记最后出现的新方块。</span><span class="shortcuts">← / → 移步 · 空格播放或暂停</span></div>
+</section>
+</section>
+<footer class="page-foot"><span>来源：你选择的本地逐步记录。页面从不上传、推理或补写新走法。</span><strong>KEV / 2048</strong></footer><noscript>请启用 JavaScript 以读取并回放本地文件。此页面不需要网络。</noscript>
+</div>
+</main>
+<script>/* Independent offline verifier; never evaluates imported data as code. */
+(function (root) {
+  'use strict';
+  const MAX_BYTES = 16 * 1024 * 1024, MAX_ROWS = 25000, MAX_TRACKS = 128, MAX_TURNS = 10000;
+  const DIRS = ['up','down','left','right'];
+  const END = new Map([['terminal','terminal'],['cap','cap'],['capped','cap'],['stopped','stopped'],['error','incomplete'],['incomplete','incomplete']]);
+  const EVENTS = new Set(['ready','loading','running','paused','move','terminal','cap','capped','stopped','error','incomplete']);
+  let imports = 0;
+  function fail(s) { throw new Error(s); }
+  function obj(x) { return x !== null && typeof x === 'object' && !Array.isArray(x); }
+  function has(o,k) { return Object.prototype.hasOwnProperty.call(o,k); }
+  function eq(a,b) { return a.length === b.length && a.every((x,i) => x === b[i]); }
+  function str(x) {
+    return typeof x === 'string' && x.trim() && x.length <= 100 && !/[\x00-\x1f\x7f]/.test(x);
+  }
+  function tile(x) {
+    return Number.isSafeInteger(x) && (x===0 || (x>=2 && x<=2**30 && Number.isInteger(Math.log2(x))));
+  }
+  function board(raw) {
+    if (!Array.isArray(raw)) fail('缺少可验证的 4×4 棋盘');
+    let b = raw;
+    if (raw.length === 4 && raw.every(row => Array.isArray(row) && row.length === 4)) b = raw.flat();
+    if (b.length !== 16 || !b.every(tile)) fail('棋盘必须包含 16 个合法方块值');
+    return b.slice();
+  }
+  const lines = Object.fromEntries(DIRS.map(d => [d, Array.from({length:4}, (_,i) =>
+    Array.from({length:4}, (_,j) => d==='up' ? 4*j+i : d==='down' ? 4*(3-j)+i :
+      d==='left' ? 4*i+j : 4*i+3-j))]));
+  function slide(b, a) {
+    const c = Array(16).fill(0);
+    let gain = 0;
+    for (const idx of lines[a]) {
+      const ts = idx.map(i=>b[i]).filter(Boolean);
+      let dest = 0;
+      for (let i = 0; i < ts.length; i++) {
+        let v = ts[i];
+        if (v === ts[i+1]) { v *= 2; i++; gain += v; }
+        c[idx[dest++]] = v;
+      }
+    }
+    return { b:c, gain };
+  }
+  function legal(b) { return DIRS.filter(d => !eq(slide(b,d).b,b)); }
+  function decode(text) {
+    if (typeof text !== 'string') fail('只接受本地文本回放');
+    if (text.length > MAX_BYTES || new TextEncoder().encode(text).byteLength > MAX_BYTES) fail('文件超过 16 MiB');
+    text = text.trimStart().replace(/^\uFEFF/, '').trim();
+    if (!text || !/^[{[]/.test(text)) fail('只支持 JSON 或 JSONL 逐步记录');
+    let x, parsed = false;
+    try { x = JSON.parse(text); parsed = true; } catch (_) {}
+    if (parsed) {
+      if (Array.isArray(x)) return x;
+      if (obj(x)) {
+        const recognized = ['moves','events','rows','frames'].filter(k => Array.isArray(x[k]));
+        if (recognized.length > 1) fail('结构含多个回放数组，无法区分');
+        if (recognized.length === 1) {
+          return x[recognized[0]].map(row => {
+            if (!obj(row)) return row;
+            const out={...row};
+            for (const k of ['seed','policy','profile','run_id','cap']) {
+              if (has(x,k) && has(row,k) && x[k] !== row[k]) fail('分组字段与步骤冲突');
+              if (has(x,k) && !has(row,k)) out[k]=x[k];
+            }
+            return out;
+          });
+        }
+        if (Array.isArray(x.before) && (Array.isArray(x.after) || Array.isArray(x.board))) return [x];
+      }
+      fail('缺少逐步记录，不能使用摘要生成回放');
+    }
+    const ls=text.split(/\r?\n/);
+    if (ls.length > MAX_ROWS) fail('记录行数超限');
+    return ls.flatMap((s,i) => {
+      if (!s.trim()) return [];
+      try { return [JSON.parse(s)]; } catch (_) { fail('第 '+(i+1)+' 行不是完整 JSON'); }
+    });
+  }
+  function stopOf(x) {
+    if (x===null || x===undefined || x==='') return null;
+    if (!END.has(x)) fail('未知结束类型');
+    return END.get(x);
+  }
+  function parseTrace(text, sourceName='导入记录') {
+    const rows=decode(text);
+    if (!rows.length || rows.length > MAX_ROWS) fail('空记录或记录数超限');
+    const sourceId='import-'+(++imports);
+    const file=(String(sourceName).split(/[\\/]/).pop()||'导入记录').replace(/[\x00-\x1f\x7f]/g,'').slice(0,160);
+    const groups=new Map();
+    let line=0;
+    for (const record of rows) {
+      line++;
+      try {
+        const r=record;
+        if (!obj(r)) fail('步骤必须为对象');
+        if (has(r,'type') && !EVENTS.has(r.type)) fail('未知事件类型');
+        // A server's ready greeting is not a run and has no trusted trajectory.
+        if (r.type==='ready' && !r.run_id && r.turn===0 && !has(r,'action')) continue;
+        if (!(Number.isSafeInteger(r.seed) && r.seed>=0) && !str(r.seed)) fail('缺少有效种子');
+        const p=has(r,'policy') ? r.policy : has(r,'profile') ? r.profile : 'native';
+        if (!str(p)) fail('无效策略名');
+        if (has(r,'run_id') && !str(r.run_id)) fail('无效运行编号');
+        const key=JSON.stringify([r.seed,p,r.run_id??null]);
+        let g=groups.get(key);
+        if (!g) {
+          if (groups.size>=MAX_TRACKS) fail('对局轨道数超限');
+          g={id:sourceId+'-game-'+groups.size,sourceId,file,seed:r.seed,label:p,policy:p,frames:[],
+             status:'incomplete',cap:null,ended:false,seq:null,opening:null};
+          groups.set(key,g);
+        }
+        if (has(r,'seq')) {
+          if (!Number.isSafeInteger(r.seq) || r.seq<0 || (g.seq!==null && r.seq<=g.seq)) fail('事件序号没有严格递增');
+          g.seq=r.seq;
+        }
+        if (has(r,'cap') && r.cap!==null) {
+          if (!Number.isSafeInteger(r.cap) || r.cap<1 || r.cap>MAX_TURNS || (g.cap!==null && g.cap!==r.cap)) fail('无效或互相矛盾的步数上限');
+          g.cap=r.cap;
+        }
+        if (has(r,'type') && r.type!=='move') {
+          if (has(r,'action') || !Number.isSafeInteger(r.turn) || r.turn<0 || !Array.isArray(r.board)) fail('无效状态事件');
+          const current=g.frames.at(-1);
+          const reported=board(r.board);
+          if (current) {
+            if (r.turn!==current.p || !eq(reported,current.b) || (has(r,'score') && r.score!==current.s) ||
+                (has(r,'tile') && r.tile!==current.m)) fail('运行状态与已记录棋盘不一致');
+          } else {
+            if (r.turn!==0 || r.score!==0 || (g.opening && !eq(reported,g.opening))) fail('首个状态必须为开局');
+            g.opening=reported;
+          }
+          const final=stopOf(END.has(r.type)?r.type:null);
+          if (final) {
+            if (!current) {
+              if (final==='stopped' || final==='incomplete') {g.ended=true; continue;}
+              fail('无可重放的走子');
+            }
+            if (g.ended && final!==g.status) fail('结束事件相互矛盾');
+            if ((final==='terminal')!==(!legal(current.b).length)) fail('结束类型与棋局状态不一致');
+            if (final==='cap' && g.cap!==null && current.p!==g.cap) fail('结束步数不是上限');
+            if (stopOf(r.stop)!==null && stopOf(r.stop)!==final) fail('结束标记相互矛盾');
+            g.status=final; g.ended=true;
+          } else if (g.ended) fail('结束后还有运行事件');
+          continue;
+        }
+        if (g.ended) fail('结束后还有走子');
+        const turn=r.turn;
+        if (!Number.isSafeInteger(turn) || turn<1 || turn>MAX_TURNS || (g.cap!==null && turn>g.cap)) fail('无效步数');
+        const prev=board(r.before), next=board(has(r,'after') ? r.after : r.board);
+        if (has(r,'after') && has(r,'board') && !eq(next,board(r.board))) fail('两种结果棋盘冲突');
+        if (!g.frames.length) {
+          if (turn!==1 || prev.filter(Boolean).length!==2 || prev.some(v=>v!==0 && v!==2 && v!==4)) fail('首步缺失或不是标准开局');
+          if (g.opening && !eq(prev,g.opening)) fail('首步和开局不一致');
+          g.frames.push({p:0,b:prev,s:0,m:Math.max(...prev),a:null,g:0,n:null});
+        }
+        const current=g.frames.at(-1);
+        if (turn!==current.p+1 || !eq(prev,current.b)) fail('步骤不连续或前后棋盘不一致');
+        const action=r.action;
+        if (!DIRS.includes(action)) fail('未知方向');
+        const moved=slide(prev,action);
+        if (eq(prev,moved.b)) fail('不能移动的方向不是合法一步');
+        const diffs=next.map((v,i)=>v===moved.b[i]?-1:i).filter(i=>i>=0);
+        if (diffs.length!==1 || moved.b[diffs[0]]!==0 || ![2,4].includes(next[diffs[0]])) fail('滑动后必须仅在空格生成一个 2 或 4');
+        const n=diffs[0];
+        if (has(r,'spawn_index') && r.spawn_index!==n) fail('新方块位置错误');
+        if (has(r,'spawn')) {
+          if (!(Array.isArray(r.spawn) && r.spawn.length===3 && r.spawn[0]===Math.floor(n/4) && r.spawn[1]===n%4 && r.spawn[2]===next[n])) fail('新方块详情错误');
+        }
+        const score=current.s+moved.gain, max=Math.max(...next);
+        if (r.score!==score || !Number.isSafeInteger(score)) fail('累计分数与实际合并不一致');
+        for (const k of ['gained','gain']) if (has(r,k) && r[k]!==moved.gain) fail('本步得分与实际合并不一致');
+        for (const k of ['tile','max_tile']) if (has(r,k) && r[k]!==max) fail('最大方块与棋盘不一致');
+        const available=legal(next);
+        if (has(r,'terminal') && (typeof r.terminal!=='boolean' || r.terminal!==!available.length)) fail('终局标记与可走方向矛盾');
+        const stop=stopOf(r.stop ?? (['capped','cap','stopped'].includes(r.status)?r.status:null));
+        if (stop && (stop==='terminal')!==(!available.length)) fail('结束标记与棋盘矛盾');
+        if (stop==='cap' && g.cap!==null && turn!==g.cap) fail('标记截断的步数不是上限');
+        g.frames.push({p:turn,b:next,s:score,m:max,a:action,g:moved.gain,n});
+        if (stop || !available.length || (g.cap!==null && turn===g.cap)) {
+          g.status=stop || (!available.length?'terminal':'cap');
+          g.ended=true;
+        }
+      } catch (err) { fail('记录 '+line+'：'+err.message); }
+    }
+    const out=[...groups.values()].filter(g=>g.frames.length>1);
+    if (!out.length) fail('没有可验证的完整走子');
+    if (out.length!==groups.size) fail('文件混有不能回放的运行');
+    return out.map(({id,file,sourceId,seed,label,policy,frames,status}) => ({id,file,sourceId,seed,label,policy,frames,status}));
+  }
+  const api={parseTrace,MAX_BYTES,MAX_ROWS,MAX_TRACKS,MAX_TURNS};
+  root.KevTrace=api;
+  if (typeof module !== 'undefined' && module.exports) module.exports=api;
+})(typeof globalThis==='object'?globalThis:this);
+</script>
+<script>'use strict';
+const $=id=>document.getElementById(id);
+const seedSelect=$('seed-select'),leftSelect=$('left-select'),rightSelect=$('right-select');
+const seek=$('seek'),play=$('play'),prev=$('prev'),next=$('next'),speed=$('speed'),marker=$('marker');
+const turnText=$('turn-output'),ticks=$('ticks'),divergence=$('jump-divergence');
+const names={up:['↑','向上'],down:['↓','向下'],left:['←','向左'],right:['→','向右']};
+const fmt=new Intl.NumberFormat('zh-CN');
+const words={terminal:'自然终局',cap:'步数到限',stopped:'已手动停止',incomplete:'记录不完整'};
+const policyNames={canonical:'标准选项',fixed:'固定槽位',identity:'原始棋盘',d4:'八方向投票',v2:'V2',hard:'V3-hard',greedy:'贪心参考',candidate:'候选版本',native:'原生模型',frozen_v2:'冻结 V2',official_kev_0_8b:'官方 Kev 0.8B'};
+const MAX_FILES=8, MAX_TOTAL_BYTES=48*1024*1024, MAX_TOTAL_GAMES=256, MAX_TOTAL_FRAMES=100000;
+let groups=new Map(),match={},turn=0,maxTurn=0,timer=null,playing=false,cut=null,loadId=0;
+const panels={};
+for(const p of document.querySelectorAll('.panel')){
+ const get=q=>p.querySelector(q), b=get('.board');
+ const nodes=Array.from({length:16},()=>{
+  const t=document.createElement('div');t.className='tile';t.setAttribute('aria-hidden','true');b.append(t);return t;
+ });
+ panels[p.dataset.slot]={element:p,nodes,board:b,title:get('h2'),source:get('.panel-source'),status:get('.status'),scoreLabel:get('.score-label'),score:get('.score'),moveLabel:get('.move-label'),move:get('.move-name'),arrow:get('.arrow'),best:get('.best'),note:get('.decision-note'),final:get('.final')};
+}
+function options(select,values,chosen){
+ select.replaceChildren(...values.map(([key,text])=>{
+  const o=document.createElement('option');o.value=key;o.textContent=text;return o;
+ }));
+ select.value=chosen;
+}
+const eq=(a,b)=>a.length===b.length&&a.every((x,i)=>x===b[i]);
+const maxP=g=>g.frames.at(-1).p;
+const frame=(g,p)=>g.frames[Math.min(p,maxP(g))];
+const revealFile=g=>'文件 '+g.sourceOrder+' · '+g.file;
+const titleOf=g=>(Object.hasOwn(policyNames,g.policy)?policyNames[g.policy]:null)||g.label||g.policy||'原生模型';
+const optionName=g=>revealFile(g)+' · '+titleOf(g);
+function putPanel(key){
+ const g=match[key], refs=panels[key];
+ refs.element.hidden=!g;
+ if(!g)return;
+ const end=maxP(g),shown=Math.min(turn,end),f=frame(g,turn),frozen=turn>end;
+ const action=f.a,spawn=f.n,board=f.b;
+ refs.title.textContent=titleOf(g);refs.source.textContent=revealFile(g);
+ for(let i=0;i<16;i++){
+  const tile=refs.nodes[i];tile.dataset.value=board[i];tile.textContent=board[i]||'';
+  const fresh=i===spawn&&!frozen;tile.classList.toggle('spawn',fresh);
+  if(fresh)tile.title='本步新方块：第 '+(Math.floor(i/4)+1)+' 行，第 '+(i%4+1)+' 列';
+  else tile.removeAttribute('title');
+ }
+ const rows=[];for(let i=0;i<16;i+=4)rows.push(board.slice(i,i+4).map(x=>x||'空').join('、'));
+ refs.board.setAttribute('aria-label',refs.title.textContent+'棋盘：'+rows.join('；'));
+ refs.status.textContent=shown===end?words[g.status]:shown?'记录可继续':'开局';
+ refs.scoreLabel.textContent=shown?'第 '+shown+' 步后得分':'开局得分';refs.score.textContent=fmt.format(f.s);
+ refs.moveLabel.textContent=action?'本步动作':'开局状态';
+ refs.arrow.textContent=!frozen&&action?names[action][0]:'';
+ refs.move.textContent=frozen?'无新动作':action?names[action][1]:'还未移动';
+ refs.best.textContent=f.m;
+ refs.final.textContent='第 '+end+' 步 · '+fmt.format(g.frames.at(-1).s)+' 分 · '+words[g.status];
+ refs.note.textContent=frozen?'此侧记录止于第 '+end+' 步，棋盘保持不变。':
+ g.status==='incomplete'&&shown===end?'文件没有终局或截断标记；未补写后续走法。':
+ action?(f.g?'本步合并 +'+fmt.format(f.g)+' 分':'本步无合并得分'):'等待选择下一步。';
+}
+function draw(){
+ putPanel('left');putPanel('right');
+ seek.value=turn;seek.disabled=!maxTurn;seek.setAttribute('aria-valuetext','第 '+turn+' / '+maxTurn+' 步');
+ seek.style.setProperty('--position',(maxTurn?100*turn/maxTurn:0)+'%');
+ turnText.textContent='第 '+turn+' / '+maxTurn+' 步';prev.disabled=turn<=0;next.disabled=turn>=maxTurn;play.disabled=!maxTurn;
+ const pair=match.right;
+ const openingMismatch=pair&&!eq(match.left.frames[0].b,pair.frames[0].b);
+ const mismatch=pair&&!eq(frame(match.left,turn).b,frame(pair,turn).b);
+ $('comparison').dataset.mismatch=String(Boolean(mismatch||openingMismatch));
+ $('comparison').textContent=!pair?'当前为单局回放。':openingMismatch?'开局棋盘不同，仅并列观看；同步步数不表示对照了同一开局。':
+ '同一步不一定是同一盘面；这里只对齐两局各自的步数。'+(mismatch?' 当前两盘不同。':' 当前两盘相同。');
+}
+function refreshPlay(){
+ play.setAttribute('aria-label',playing?'暂停':'播放');play.innerHTML=playing?
+ '<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M6 5h4v14H6zm8 0h4v14h-4z"/></svg>':
+ '<svg aria-hidden="true" viewBox="0 0 24 24" fill="currentColor"><path d="M7 4l14 8-14 8z"/></svg>';
+}
+/* Deterministic one-slide visual layout, independent of the logged random spawn. */
+function slidePlan(board, direction) {
+ if (!Object.hasOwn(names,direction)) return null;
+ const vertical=direction==='up'||direction==='down';
+ const reverse=direction==='down'||direction==='right';
+ const slid=Array(16).fill(0), moves=[], merges=[];
+ for(let lane=0;lane<4;lane++){
+  const cells=Array.from({length:4},(_,i)=>vertical?4*i+lane:4*lane+i);
+  if(reverse) cells.reverse();
+  const used=cells.filter(i=>board[i]!==0);
+  for(let i=0,k=0;i<used.length;i++,k++){
+   const from=used[i], to=cells[k], value=board[from];
+   moves.push({from,to,value});
+   if(i+1<used.length && board[used[i+1]]===value){
+    moves.push({from:used[++i],to,value});
+    slid[to]=value*2;
+    merges.push(to);
+   }else slid[to]=value;
+  }
+ }
+ return {slid,moves,merges};
+}
+const reducedMotion=typeof matchMedia==='function'?matchMedia('(prefers-reduced-motion: reduce)'):null;
+let effects=null;
+function finishEffects(){
+ if(!effects)return;
+ const {timers,animations,layers}=effects;
+ effects=null;
+ for(const id of timers)clearTimeout(id);
+ for(const animation of animations)animation.cancel();
+ for(const layer of layers){layer.node.remove();layer.board.classList.toggle('is-sliding',false)}
+}
+if(reducedMotion?.addEventListener)reducedMotion.addEventListener('change',()=>{if(reducedMotion.matches)finishEffects()});
+if(typeof window!=='undefined'){
+ window.addEventListener('resize',finishEffects);
+ document.addEventListener('visibilitychange',()=>{if(document.hidden) finishEffects()});
+}
+function collectTransition(key,t){
+ const rec=match[key], refs=panels[key];
+ if(!rec||t>maxP(rec))return null; // frozen arm: never overlay or animate it
+ const before=rec.frames[t-1].b;
+ const {b:after,a:action,n:spawn}=rec.frames[t];
+ const plan=slidePlan(before,action);
+ if(!plan || !Number.isInteger(spawn) || spawn<0 || spawn>15 || plan.slid[spawn]!==0 || ![2,4].includes(after[spawn])
+         || !after.every((tile,i)=>i===spawn||tile===plan.slid[i])) return null;
+ const bounds=refs.board.getBoundingClientRect();
+ if(!bounds.width || !bounds.height)return null;
+ const cells=refs.nodes.map(tile=>{
+  const r=tile.getBoundingClientRect();
+  return {x:r.left-bounds.left,y:r.top-bounds.top,w:r.width,h:r.height}
+ });
+ return {board:refs.board,plan,cells,after,spawn};
+}
+function overlayTile(layer,index,value,spawn=false){
+ const tile=document.createElement('div');
+ const {x,y,w,h}=layer.cells[index];
+ tile.className='tile fx-tile'+(spawn?' spawn':'');
+ tile.dataset.value=value;tile.textContent=value;
+ Object.assign(tile.style,{left:x+'px',top:y+'px',width:w+'px',height:h+'px'});
+ layer.node.append(tile);
+ return tile;
+}
+function animateForward(t){
+ if(reducedMotion?.matches || typeof Element==='undefined' || typeof Element.prototype.animate!=='function')return;
+ const inputs=Object.keys(panels).map(key=>collectTransition(key,t)).filter(Boolean);
+ if(!inputs.length)return;
+ const speedValue=Math.max(.5,Math.min(4,Number(speed.value)||1));
+ const slideLength=Math.min(255,Math.round(216/speedValue));
+ const mergeLength=Math.min(132,Math.round(108/speedValue));
+ const popLength=Math.min(139,Math.round(122/speedValue));
+ const fx={layers:[],timers:[],animations:[]};effects=fx;
+ const defer=(ms, work)=>fx.timers.push(setTimeout(()=>{if(effects===fx)work()},ms));
+ const animate=(el,keys,options)=>fx.animations.push(el.animate(keys,options));
+ for(const info of inputs){
+  const node=document.createElement('div');
+  node.className='fx-layer';node.setAttribute('aria-hidden','true');
+  const layer={...info,node};fx.layers.push(layer);
+  layer.board.classList.toggle('is-sliding',true);
+  layer.board.append(node);
+  for(const {from,to,value} of layer.plan.moves){
+   const el=overlayTile(layer,from,value);
+   if(from!==to){
+    const dx=layer.cells[to].x-layer.cells[from].x;
+    const dy=layer.cells[to].y-layer.cells[from].y;
+    animate(el,[{transform:'translate(0,0)'},{transform:'translate('+dx+'px,'+dy+'px)'}],
+        {duration:slideLength,easing:'cubic-bezier(.23,.74,.35,1)',fill:'forwards'});
+   }
+  }
+ }
+ defer(slideLength,()=>{
+  for(const layer of fx.layers){
+   layer.node.replaceChildren();
+   for(const [i,value] of layer.plan.slid.entries()){
+    if(!value)continue;
+    const el=overlayTile(layer,i,value);
+    if(layer.plan.merges.includes(i)){
+     animate(el,[{transform:'scale(.92)'},{transform:'scale(1.14)',offset:.42},{transform:'scale(1)'}],
+         {duration:mergeLength,easing:'ease-out'});
+    }
+   }
+  }
+ });
+ defer(slideLength+mergeLength,()=>{
+  for(const layer of fx.layers){
+   const el=overlayTile(layer,layer.spawn,layer.after[layer.spawn],true);
+   animate(el,[{opacity:0,transform:'scale(.48)'},{opacity:1,transform:'scale(1.12)',offset:.65},{opacity:1,transform:'scale(1)'}],
+       {duration:popLength,easing:'ease-out',fill:'both'});
+  }
+ });
+ defer(slideLength+mergeLength+popLength,finishEffects);
+}
+
+function haltPlayback(){clearTimeout(timer);timer=null;playing=false;refreshPlay()}
+function stop(){haltPlayback();finishEffects()}
+function setTurn(t,cancel=true,animated=false){
+ if(!match.left)return;
+ const previous=turn;if(cancel)stop();else finishEffects();
+ turn=Math.min(maxTurn,Math.max(0,Number(t)));draw();
+ if(animated&&turn===previous+1)animateForward(turn);
+}
+function stepPlayback(){
+ clearTimeout(timer);if(!playing)return;
+ if(turn>=maxTurn){haltPlayback();return}
+ timer=setTimeout(()=>{setTurn(turn+1,false,true);stepPlayback()},650/Number(speed.value));
+}
+function toggle(){
+ if(!maxTurn)return;
+ if(playing){stop();return}
+ if(turn>=maxTurn)setTurn(0,false);
+ playing=true;refreshPlay();stepPlayback();
+}
+function resolveDivergence(a,b){
+ if(!b)return null;
+ if(!eq(a.frames[0].b,b.frames[0].b))return {turn:0,text:'从开局盘面就不同'};
+ for(let i=1;i<=Math.min(maxP(a),maxP(b));i++){
+  if(a.frames[i].a!==b.frames[i].a)return {turn:i,text:'首次走法分岔 · 第 '+i+' 步'};
+  if(!eq(a.frames[i].b,b.frames[i].b))return {turn:i,text:'首次盘面分岔 · 第 '+i+' 步'};
+ }
+ return null;
+}
+function updateMatch(goTo=0,changed=null){
+ const all=groups.get(seedSelect.value);
+ if(!all?.length)return;
+ let l=all.find(g=>g.uid===leftSelect.value)||all[0],r=all.find(g=>g.uid===rightSelect.value)||null;
+ if(r===l){
+  if(changed==='right')l=all.find(g=>g!==r);else r=all.find(g=>g!==l&&eq(g.frames[0].b,l.frames[0].b))||all.find(g=>g!==l)||null;
+ }
+ options(leftSelect,all.map(g=>[g.uid,optionName(g)]),l.uid);
+ options(rightSelect,[['','不比较'],...all.filter(g=>g!==l).map(g=>[g.uid,optionName(g)])],r?.uid||'');
+ $('right-control').hidden=all.length<2;
+ const pair=Boolean(r);$('boards').classList.toggle('single',!pair);
+ $('track-hint').textContent=pair?'比较时对齐两边的步数':'查看这局记录的每一步';
+ match={left:l,right:r};
+ maxTurn=Math.max(maxP(l),r?maxP(r):0);seek.max=maxTurn;
+ const marks=[...new Set([0,Math.round(maxTurn/4),Math.round(maxTurn/2),Math.round(maxTurn*3/4),maxTurn])];
+ ticks.replaceChildren(...marks.map(t=>{
+  const x=document.createElement('span');x.className='tick';x.style.left=(maxTurn?100*t/maxTurn:0)+'%';x.textContent=t;return x;
+ }));
+ cut=resolveDivergence(l,r);divergence.hidden=!cut;divergence.textContent=cut?.text||'';
+ marker.hidden=!pair||maxP(l)===maxP(r);
+ if(!marker.hidden){
+  const shorter=maxP(l)<maxP(r)?l:r;
+  marker.style.left=100*maxP(shorter)/maxTurn+'%';
+  marker.textContent=(shorter===l?'左侧':'右侧')+'停止记录 · '+maxP(shorter)+' 步';
+  marker.onclick=()=>setTurn(maxP(shorter));
+ }
+ setTurn(goTo);
+}
+const openingKey=g=>g.frames[0].b.join(',');
+function sameOpeningPair(all){
+ const seen=new Map();
+ for(const game of all){const key=openingKey(game);if(seen.has(key))return [seen.get(key),game];seen.set(key,game)}
+ return null;
+}
+function chooseSeed(){
+ const all=groups.get(seedSelect.value);
+ if(!all?.length)return;
+ const [left,right]=sameOpeningPair(all)||all;
+ options(leftSelect,all.map(g=>[g.uid,optionName(g)]),left.uid);
+ options(rightSelect,all.filter(g=>g!==left).map(g=>[g.uid,optionName(g)]),right?.uid||'');
+ updateMatch();
+}
+function importMessage(text,error=false){
+ const el=$('import-status');el.dataset.error=String(error);el.textContent=text;
+}
+async function importFiles(files){
+ if(!files.length)return;
+ const my=++loadId;
+ const fileMax=Math.min(KevTrace.MAX_BYTES||25*1024*1024,25*1024*1024);
+ $('pick').disabled=true;
+ importMessage('正在本地读取 '+files.length+' 个文件…');
+ try{
+  if(files.length>MAX_FILES||files.reduce((sum,f)=>sum+f.size,0)>MAX_TOTAL_BYTES)
+   throw Error('可一次导入最多 8 个文件，总大小不超过 48 MiB。');
+  if(files.some(f=>f.size===0||f.size>fileMax))
+   throw Error('有空文件，或单个文件超过 '+Math.floor(fileMax/1048576)+' MiB。没有读取文件内容。');
+  const staged=new Map();let count=0,totalFrames=0;
+  for(const [i,f] of files.entries()){
+   if(my!==loadId)return;
+   let games;
+   const readable=f.name||('未命名文件 '+(i+1));
+   try{
+    const raw=await f.text();
+    if(my!==loadId)return;
+    games=KevTrace.parseTrace(raw,readable);
+   }catch(e){throw Error('「'+readable+'」：'+String(e.message||e).slice(0,220));}
+   for(const [j,g] of games.entries()){
+    if(++count>MAX_TOTAL_GAMES||(totalFrames+=g.frames.length)>MAX_TOTAL_FRAMES)
+     throw Error('本次对局数或帧数超过页面上限；请选择更少的结果文件。');
+    const group=String(g.seed);
+    if(!staged.has(group))staged.set(group,[]);
+    staged.get(group).push({...g,uid:'file-'+i+'-game-'+j,sourceOrder:i+1});
+   }
+  }
+  if(my!==loadId)return;
+  if(!count)throw Error('没有找到可回放的逐步记录。');
+  groups=staged;
+  const seedKeys=[...groups.keys()];
+  const preferred=seedKeys.find(k=>sameOpeningPair(groups.get(k)))||seedKeys.find(k=>groups.get(k).length>1)||seedKeys[0];
+  options(seedSelect,seedKeys.map(k=>[k,k+' · '+groups.get(k).length+' 局']),preferred);
+  $('empty').hidden=true;$('replay').hidden=false;
+  chooseSeed();
+  importMessage('已读取 '+files.length+' 个文件 · '+count+' 局 · '+groups.size+' 个种子。文件未上传。');
+ }catch(e){
+  if(my===loadId)importMessage(String(e.message||e)+(groups.size?' 已保留上一次成功导入的回放。':''),true);
+ }finally{
+  if(my===loadId)$('pick').disabled=false;
+ }
+}
+const drop=$('import-panel'),fileInput=$('file-input');
+$('pick').addEventListener('click',()=>fileInput.click());
+fileInput.addEventListener('change',()=>{
+ const files=Array.from(fileInput.files||[]);fileInput.value='';importFiles(files);
+});
+drop.addEventListener('dragover',e=>{e.preventDefault();drop.classList.toggle('dragover',true)});
+drop.addEventListener('dragleave',()=>drop.classList.toggle('dragover',false));
+drop.addEventListener('drop',e=>{
+ e.preventDefault();drop.classList.toggle('dragover',false);importFiles(Array.from(e.dataTransfer?.files||[]));
+});
+seedSelect.addEventListener('change',chooseSeed);
+leftSelect.addEventListener('change',()=>updateMatch(turn,'left'));rightSelect.addEventListener('change',()=>updateMatch(turn,'right'));
+seek.addEventListener('input',()=>setTurn(seek.value));
+prev.addEventListener('click',()=>setTurn(turn-1));next.addEventListener('click',()=>setTurn(turn+1,true,true));
+play.addEventListener('click',toggle);speed.addEventListener('change',()=>{finishEffects();stepPlayback()});
+$('jump-start').addEventListener('click',()=>setTurn(0));$('jump-end').addEventListener('click',()=>setTurn(maxTurn));
+divergence.addEventListener('click',()=>{if(cut)setTurn(cut.turn)});
+document.addEventListener('keydown',e=>{
+ if(!match.left||e.altKey||e.ctrlKey||e.metaKey||e.shiftKey||e.target instanceof HTMLElement&&/^(INPUT|SELECT|TEXTAREA|BUTTON)$/.test(e.target.tagName))return;
+ if(e.key==='ArrowLeft'){e.preventDefault();setTurn(turn-1)}
+ else if(e.key==='ArrowRight'){e.preventDefault();setTurn(turn+1,true,true)}
+ else if(e.key===' '){e.preventDefault();toggle()}
+});
+</script>
+<script>
+'use strict';
+(()=>{
+ const $=id=>document.getElementById(id);
+ const loc=window.location;
+ const loopback=loc.protocol==='http:'&&['127.0.0.1','localhost'].includes(loc.hostname)&&!loc.username&&!loc.password;
+ const tabs={monitor:$('arcade-monitor-tab'),review:$('arcade-review-tab')};
+ const panes={monitor:$('arcade-monitor-pane'),review:$('arcade-review-pane')};
+ const status=$('monitor-connection'), sourceBox=$('monitor-sources'), desc=$('monitor-description');
+ const filterNodes=[...document.querySelectorAll('[data-monitor-filter]')];
+ const typeNames={training:'训练',inference:'推理',benchmark:'测速'};
+ const stateNames={ready:'就绪',loading:'加载中',running:'进行中',move:'进行中',paused:'已暂停',terminal:'自然结束',
+   cap:'达到步数上限',capped:'达到步数上限',stopped:'已停止',error:'失败',completed:'已完成',complete:'已完成',
+   waiting:'等数据',missing:'没找到源',stale:'更新可能过期',unknown:'状态未确认',incomplete:'记录不完整',unavailable:'暂不可读'};
+ const phaseNames={loading:'加载模型',loading_model:'加载模型',encoding:'编码',cache:'缓存',train_encoding:'编码训练数据',fit:'优化决策头',head_fit:'优化决策头',train:'训练',training:'训练',test:'测试',evaluate:'验证',dev:'验证',development_evaluation:'验证',reload:'重载核验',official_reload:'重载核验',save:'保存',checkpoint_save:'保存检查点',done:'完成',completed:'完成',native_inference:'原生 Kev 推理',train_cache:'缓存训练特征',dev_cache:'缓存验证特征',starting:'启动训练进程',inference:'推理',running:'运行中',waiting:'等待数据'};
+ const modeNames={progress_log:'联接进度日志',static_result:'静态结果文件',in_session:'当前会话',live:'实时源',stream:'实时源',file_tail:'联接日志',watch:'联接日志',linked:'联接源',static:'静态文件',imported:'已导入',result:'结果文件',completed:'完成记录',recorded:'离线记录',archive:'离线记录',archived:'离线记录',waiting:'等待来源'};
+ const knownActive=new Set(['running','move','loading']);
+ const staticModes=new Set(['static_result','static','imported','result','completed','recorded','archive','archived']);
+ let filter='all',snapshot=null,connected=false,received=false,inflight=false,nextPoll=null,suspended=false;
+ const own=(o,k)=>k!==undefined&&Object.prototype.hasOwnProperty.call(o,k);
+ const finite=x=>typeof x==='number'&&Number.isFinite(x);
+ const format=new Intl.NumberFormat('zh-CN',{maximumFractionDigits:3});
+ const dated=new Intl.DateTimeFormat('zh-CN',{dateStyle:'short',timeStyle:'medium'});
+ const text=(s,max=136)=>typeof s==='string'&&s.trim()?s.trim().slice(0,max):'';
+ const fmtDate=s=>{
+  const ms=typeof s==='number'?(s<1e11?s*1000:s):Date.parse(s||'');
+  return finite(ms)?dated.format(ms):'未记录';
+ };
+ const at=s=>typeof s==='number'?(s<1e11?s*1000:s):Date.parse(s||'');
+ const n=x=>finite(x)?format.format(x):'—';
+ const label=(map,k,fallback)=>own(map,k)?map[k]:(text(k,60)||fallback);
+ function make(tag,klass='',txt=''){
+  const e=document.createElement(tag);if(klass)e.className=klass;if(txt)e.textContent=txt;return e;
+ }
+ function advisory(message){
+  const e=make('div','card monitor-empty',message);sourceBox.replaceChildren(e);
+ }
+ function capsule(c,when){
+  const state=typeof c.status==='string'?c.status:'unknown';
+  const age=Date.now()-at(when);
+  const stale=!staticModes.has(c.mode)&&(!connected||state==='stale'||(knownActive.has(state)&&finite(age)&&age>90000));
+  const z=make('span','pill',stale&&state!=='stale'?'更新可能过期':label(stateNames,state,'状态未确认'));
+  z.dataset.tone=stale?'old':knownActive.has(state)?'active':state==='error'?'error':'normal';
+  return z;
+ }
+ function boardGrid(board){
+  if(!Array.isArray(board))return null;
+  const b=board.length===4&&board.every(r=>Array.isArray(r)&&r.length===4)?board.flat():board;
+  if(b.length!==16||!b.every(x=>Number.isInteger(x)&&x>=0&&x<=1048576&&(x===0||(x&(x-1))===0)))return null;
+  const e=make('div','monitor-board');e.setAttribute('role','img');
+  e.setAttribute('aria-label','记录中的最新棋盘：'+b.join('、'));
+  for(const x of b){const tile=make('span','tile',x?String(x):'');tile.dataset.value=x;tile.setAttribute('aria-hidden','true');e.append(tile)}
+  return e;
+ }
+ function metric(container,key,value){
+  const e=make('div','monitor-metric');
+  e.append(make('dt','',key),make('dd','',value));container.append(e);
+ }
+ function history(ch,card){
+  if(!Array.isArray(ch.history))return;
+  const log=make('ol','monitor-history');
+  const events=ch.history.filter(e=>e&&typeof e==='object').slice(-12).sort((a,b)=>(at(b.timestamp||b.updated_at||b.at)||0)-(at(a.timestamp||a.updated_at||a.at)||0)).slice(0,5);
+  for(const e of events){
+   const p=finite(e.step)?'第 '+n(e.step)+' 步':finite(e.turn)?'第 '+n(e.turn)+' 步':'';
+   const what=[label(phaseNames,e.phase,''),p,own(stateNames,e.status)?stateNames[e.status]:''].filter(Boolean).join(' · ');
+   if(!what)continue;
+   log.append(make('li','',fmtDate(e.timestamp||e.updated_at||e.at)+' · '+what));
+  }
+  if(log.children.length)card.append(make('h3','','最近更新'),log);
+ }
+ function channelCard(c){
+  const card=make('article','card monitor-card'), header=make('div','monitor-top');
+  const latest=c.latest&&typeof c.latest==='object'?c.latest:{};
+  const phase=c.phase||latest.phase;
+  const last=c.updated_at||latest.updated_at||latest.timestamp;
+  const statusLabel=label(stateNames,c.status,'状态未确认');
+  const kind=label(typeNames,c.kind,'其他');
+  const modeLabel=label(modeNames,c.mode,'未确认来源类型');
+  header.append(make('h2','',text(c.name,100)||'未命名来源'),capsule(c,last));card.append(header);
+  card.append(make('p','monitor-meta',kind+' · '+modeLabel+' · '+(staticModes.has(c.mode)&&!latest.timestamp?'文件时间：':'最后更新：')+fmtDate(last)));
+  const stage=label(phaseNames,phase,'未报告阶段');
+  card.append(make('p','monitor-stage','阶段：'+stage+(statusLabel==='更新可能过期'?'':' · '+statusLabel)));
+  const count=finite(latest.step)?latest.step:finite(latest.turn)?latest.turn:undefined;
+  const total=finite(latest.total)?latest.total:finite(latest.cap)?latest.cap:undefined;
+  if(finite(count)){
+   if(finite(total)&&total>0&&count>=0&&count<=total){
+    const progress=make('progress','monitor-progress');progress.max=total;progress.value=count;
+    progress.setAttribute('aria-label','已记录进度：'+n(count)+' / '+n(total));card.append(progress);
+    card.append(make('p','monitor-meta','已记录 '+n(count)+' / '+n(total)));
+   }else card.append(make('p','monitor-meta','已记录 '+n(count)+' 步'));
+  }
+  const metrics=make('dl','monitor-metrics');
+  if(finite(latest.epoch))metric(metrics,'训练轮次',n(latest.epoch)+(finite(latest.epochs)?' / '+n(latest.epochs):''));
+  if(finite(latest.loss))metric(metrics,'损失',n(latest.loss));
+  if(finite(latest.score))metric(metrics,'已记录得分',n(latest.score));
+  if(finite(latest.tile||latest.max_tile))metric(metrics,'最大方块',n(latest.tile||latest.max_tile));
+  if(finite(latest.decision_ms))metric(metrics,'该步推理耗时',n(latest.decision_ms)+' 毫秒');
+  if(finite(latest.elapsed_seconds))metric(metrics,'已记录的耗时',n(latest.elapsed_seconds)+' 秒');
+  if(finite(latest.train)&&finite(latest.dev))metric(metrics,'训练 / 验证盘面',n(latest.train)+' / '+n(latest.dev));
+  const timings=c.timings&&typeof c.timings==='object'&&!Array.isArray(c.timings)?c.timings:{};
+  for(const [k,v] of Object.entries(timings).slice(0,12)){
+   if(!finite(v)||v<0)continue;
+   const [suffix,unit]=k.endsWith('_seconds')?['_seconds','秒']:k.endsWith('_ms')?['_ms','毫秒']:['',''];
+   if(!unit)continue;
+   const phase=suffix?k.slice(0,-suffix.length):k;
+   metric(metrics,label(phaseNames,phase.replace(/_/g,' '),phase),n(v)+' '+unit);
+  }
+  if(metrics.children.length)card.append(metrics);
+  const board=boardGrid(latest.board);
+  if(board){card.append(make('h3','','最新记录中的棋盘'),board)}
+  const reported=text(latest.checkpoint||c.checkpoint,64);
+  if(reported&&/^[A-Za-z0-9_. -]{1,64}$/.test(reported))card.append(make('p','monitor-meta','检查点：'+reported));
+  if(!board&&!metrics.children.length&&!last&&!phase) {
+   card.append(make('p','monitor-meta','这个来源还未报告阶段、进度或耗时。'));
+  }
+  history(c,card);
+  return card;
+ }
+ function render(){
+  const chans=snapshot?.channels;
+  status.dataset.tone=connected?'active':received?'old':'normal';
+  status.textContent=!loopback?'未联接本机服务':connected?'本机服务已联接':received?'连接中断':'正在查询本机服务';
+  if(!loopback){
+   desc.textContent='当前在文件模式中，没有已联接的实时来源。切到「即时回看」仍可读本地逐步记录。';
+   advisory('未联接训练或推理来源。此页不会启动任务、改参数或补写数据。');
+   return;
+  }
+  if(connected)desc.textContent='根据本机服务实际报告显示。只读观察，不会开始、暂停或配置任何任务。';
+  else if(received)desc.textContent='连接中断，保留最后一次收到的记录；以下不是当前实时状态。';
+  else desc.textContent='正在等待本机服务提供观察来源。';
+  if(!Array.isArray(chans)){advisory(connected?'服务未报告观察来源。':received?'暂未收到来源记录，等待重连。':'尚未收到观察来源。');return}
+  const good=chans.filter(c=>c&&typeof c==='object'&&(filter==='all'||c.kind===filter));
+  if(!good.length){advisory(filter==='all'?'还没有已联接的观察来源。':'当前没有此类来源。');return}
+  sourceBox.replaceChildren(...good.slice(0,24).map(channelCard));
+ }
+ function show(tab,focus=false){
+  if(tab==='monitor'){
+   const b=$('play');if(b?.getAttribute('aria-label')==='暂停')b.click();
+  }
+  for(const name of Object.keys(tabs)){
+   const selected=name===tab;
+   tabs[name].setAttribute('aria-selected',String(selected));tabs[name].tabIndex=selected?0:-1;
+   panes[name].hidden=!selected;
+  }
+  if(focus)tabs[tab].focus();
+ }
+ for(const [name,tab] of Object.entries(tabs)){
+  tab.addEventListener('click',()=>show(name));
+  tab.addEventListener('keydown',event=>{
+   if(!['ArrowLeft','ArrowRight','Home','End'].includes(event.key))return;
+   event.preventDefault();event.stopPropagation();
+   show(event.key==='Home'?'monitor':event.key==='End'?'review':name==='review'?'monitor':'review',true);
+  });
+ }
+ for(const tab of filterNodes){
+  tab.addEventListener('click',()=>{
+   filter=tab.dataset.monitorFilter;
+   for(const item of filterNodes)item.setAttribute('aria-pressed',String(item===tab));
+   render();
+  });
+ }
+ async function poll(){
+  if(!loopback||inflight||suspended)return;
+  inflight=true;
+  try{
+   const request={method:'GET',cache:'no-store',credentials:'same-origin'};
+   if(typeof AbortSignal!=='undefined'&&typeof AbortSignal.timeout==='function')request.signal=AbortSignal.timeout(6000);
+   const response=await fetch('/channels',request);
+   if(!response.ok)throw Error('source offline');
+   const data=await response.json();
+   if(!data||!Array.isArray(data.channels))throw Error('invalid source status');
+   snapshot=data;connected=true;
+  }catch{connected=false}
+  finally{
+   received=true;inflight=false;render();
+   if(!suspended)nextPoll=setTimeout(poll,2400);
+  }
+ }
+ window.addEventListener('pagehide',()=>{suspended=true;clearTimeout(nextPoll)});
+ window.addEventListener('pageshow',()=>{if(suspended){suspended=false;poll()}});
+ show('monitor');render();poll();
+})();
+
+</script>
+</body>
+</html>

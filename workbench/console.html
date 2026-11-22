@@ -1,0 +1,366 @@
+<!doctype html>
+<html lang="zh-CN">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="color-scheme" content="light">
+<title>2048 云端实况 · Kev Lab</title>
+<style>
+:root{--ink:#132238;--muted:#526882;--line:#dee6ef;--indigo:#4f46ce;--purple:#eeecff;--coral:#ae4132;--ok:#16715e;--shadow:#dce6f2}
+*{box-sizing:border-box}
+body{margin:0;min-height:100dvh;color:var(--ink);background:linear-gradient(180deg,#f7faff,#edf3fa);font:16px/1.5 "Segoe UI","Noto Sans CJK SC","Microsoft Yahei","PingFang SC",sans-serif}
+main{max-width:1068px;width:calc(100% - 44px);margin:auto}
+button,input{font:inherit}
+button:focus-visible,input:focus-visible{outline:3px solid #857bf3;outline-offset:3px}
+h1,h2,h3,p,dl,dd{margin:0}
+header{height:72px;display:flex;align-items:center;border-bottom:1px solid var(--line);gap:14px}
+.brand{display:flex;align-items:center;gap:10px;font-weight:800;letter-spacing:.11em;white-space:nowrap}
+.logo{display:grid;grid-template-columns:repeat(2,9px);gap:3px}
+.logo i{width:9px;height:9px;border-radius:2px;background:#5b50e5}
+.logo i:nth-child(2){background:#9b94f4}.logo i:nth-child(3){background:#c4befc}
+.crumb{color:var(--muted);font-size:13px;padding-left:14px;border-left:1px solid var(--line)}
+.pill{display:inline-flex;align-items:center;gap:7px;border-radius:999px;padding:5px 10px;background:#edf1f8;color:#526882;font-size:13px;font-weight:700;white-space:nowrap}
+.pill::before{content:"";width:7px;height:7px;border-radius:50%;background:currentColor}
+.pill[data-kind=connected],.pill[data-kind=running],.pill[data-kind=move]{color:var(--ok);background:#e7f6ef}
+.pill[data-kind=connecting],.pill[data-kind=loading],.pill[data-kind=paused],.pill[data-kind=cap]{color:#76501f;background:#fff3dc}
+.pill[data-kind=disconnected],.pill[data-kind=error]{color:var(--coral);background:#fcefea}
+header .pill{margin-left:auto}
+.intro{padding:25px 0 19px}
+h1{font-size:clamp(29px,4.5vw,43px);letter-spacing:-.5px;line-height:1.2;margin-bottom:5px}
+.sub{color:var(--muted);font-size:15px}
+.card{border:1px solid var(--line);border-radius:20px;background:#fff;box-shadow:0 4px 0 var(--shadow)}
+.desk{display:grid;grid-template-columns:minmax(0,1.28fr) minmax(0,.93fr);gap:20px;align-items:start}
+.board-card{padding:17px}
+.board-top{display:flex;justify-content:space-between;align-items:center;gap:8px;margin:0 0 12px}
+h2{font-size:22px;line-height:1.15}
+.board{position:relative;aspect-ratio:1;max-width:483px;width:100%;margin:auto;background:#d3ddeb;border-radius:17px;padding:8px;gap:6px;display:grid;grid-template:repeat(4,minmax(0,1fr))/repeat(4,minmax(0,1fr));overflow:hidden;container-type:inline-size;--accent:var(--indigo)}
+.tile{position:relative;border-radius:10px;display:grid;place-items:center;background:#e3eaf2;color:#2d435a;font:750 clamp(18px,8.8cqi,42px)/1 "Segoe UI",system-ui,sans-serif;min-width:0}
+.tile[data-value="2"]{background:#fafcff}.tile[data-value="4"]{background:#edf0ff;color:#403d8e}.tile[data-value="8"]{background:#d9e4ff;color:#203e7d}.tile[data-value="16"]{background:#a7bff3;color:#192950}.tile[data-value="32"]{background:#5366ad;color:#fff}.tile[data-value="64"]{background:#333580;color:#fff}.tile[data-value="128"]{background:#332c72;color:#fff}.tile[data-value="256"]{background:#292259;color:#fff}.tile[data-value="512"]{background:#233160;color:#fff}.tile[data-value="1024"]{background:#115548;color:#fff}.tile[data-value="2048"]{background:#815720;color:#fff}
+.tile.spawn{outline:3px solid var(--accent);outline-offset:-3px}
+.tile.spawn::after{content:"";position:absolute;width:7px;height:7px;border-radius:50%;top:7px;right:7px;background:var(--accent)}
+.board.is-sliding>.tile{color:transparent!important;background:#e3eaf2!important;outline:none!important}
+.board.is-sliding>.tile::after{display:none}
+.fx-layer{position:absolute;inset:0;pointer-events:none;z-index:2;overflow:hidden}
+.tile.fx-tile{position:absolute;max-width:none;will-change:transform,opacity}
+.board-foot{display:flex;justify-content:space-between;gap:8px;color:var(--muted);font-size:12px;margin-top:10px}
+.side{display:grid;gap:12px}
+.side section,.controls{padding:15px}
+.metrics{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:9px;margin-top:10px}
+.metric{background:#f1f5fb;border-radius:11px;padding:9px}
+.metric dt{color:var(--muted);font-size:13px}
+.metric dd{font-size:26px;font-weight:760;line-height:1.18;overflow-wrap:anywhere;font-variant-numeric:tabular-nums;margin-top:3px}
+.action{display:flex;justify-content:space-between;align-items:center;gap:6px;margin:10px 0 9px;font-weight:700;color:var(--indigo)}
+.action small{color:var(--muted);font-weight:500}
+#probability{display:grid;gap:7px;margin-top:9px}
+.prob{display:grid;grid-template-columns:33px 1fr 57px;align-items:center;gap:8px;color:var(--muted);font-size:13px}
+.prob.chosen{color:var(--indigo);font-weight:750}
+.bar{border-radius:25px;background:#edf1f7;height:7px;overflow:hidden}
+.bar i{display:block;width:0;height:100%;background:#8d86ed;border-radius:inherit}
+.prob.chosen .bar i{background:var(--indigo)}
+.pvalue{text-align:right;font-variant-numeric:tabular-nums}
+#probability-caption{margin-top:9px;font-size:12px;color:var(--muted)}
+h3{font-size:15px;margin-bottom:7px}
+form{display:grid;grid-template-columns:minmax(100px,1fr) minmax(72px,.55fr) auto;gap:7px;align-items:end}
+label{font-size:12px;font-weight:700;color:var(--muted);display:block}
+input{display:block;width:100%;min-width:0;margin-top:4px;padding:7px;border-radius:8px;border:1px solid #cbd7e6;background:#fbfdff;color:var(--ink);font-variant-numeric:tabular-nums}
+button{border:1px solid #d7e1f0;border-radius:9px;background:#f4f7fc;color:var(--ink);padding:8px 11px;font-size:13px;font-weight:740;min-height:38px;cursor:pointer}
+button.primary{background:var(--indigo);color:white;border-color:var(--indigo)}
+button.danger{color:var(--coral);background:#fff6f3}
+button:disabled{opacity:.47;cursor:not-allowed}
+.buttons{display:flex;flex-wrap:wrap;gap:6px;margin-top:9px}
+.notice{font-size:13px;color:var(--muted);min-height:2.1em;margin-top:9px;overflow-wrap:anywhere}
+.notice[data-error=true]{color:var(--coral)}
+footer{font-size:12px;color:var(--muted);padding:16px 0 19px;display:flex;justify-content:space-between;gap:8px}
+code{white-space:nowrap}
+@media(max-width:840px){main{width:calc(100% - 28px)}.desk{gap:12px}.board-card{padding:12px}.side section,.controls{padding:11px}.metric{padding:6px}.metric dd{font-size:21px}.prob{gap:6px}}
+@media(max-width:650px){main{width:calc(100% - 24px);max-width:500px}header{height:50px;gap:8px}.crumb{font-size:11px;padding-left:6px}.brand{font-size:13px;gap:6px}.logo{grid-template-columns:repeat(2,7px);gap:2px}.logo i{width:7px;height:7px}.pill{font-size:11px;padding:4px 6px;gap:5px}.pill::before{width:6px;height:6px}.intro{padding:12px 0}.sub{font-size:12px}.desk{grid-template-columns:1fr}.board-card{padding:9px}.board{padding:6px;gap:4px}.tile{border-radius:7px}.board-top{margin-bottom:6px}.board-top h2{font-size:18px}.board-foot{font-size:11px;margin-top:6px}.side{grid-template-columns:1fr}.metric dd{font-size:22px}.side section,.controls{padding:10px}footer{font-size:11px}}
+@media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<main>
+<header>
+<div class="brand"><span class="logo" aria-hidden="true"><i></i><i></i><i></i><i></i></span>KEV LAB</div>
+<span class="crumb">模型实验 / 云端实况</span><span class="pill" id="connection" data-kind="connecting">正在连接</span>
+</header>
+<section class="intro">
+<h1>2048 云端实况</h1>
+<p class="sub">每一步都来自云端 Kev 的真实推理。没有收到服务器的新走法，棋盘就不会前进。</p>
+</section>
+<div class="desk">
+<section class="card board-card" aria-labelledby="board-title">
+<div class="board-top"><h2 id="board-title">当前棋盘</h2><span class="pill" id="status" data-kind="ready">等待状态</span></div>
+<div class="board" id="board" role="img" aria-label="棋盘尚未启动"></div>
+<div class="board-foot"><span id="route">等待云端推理</span><span>描边 = 本步新方块</span></div>
+</section>
+<div class="side">
+<section class="card" aria-labelledby="data-title">
+<h2 id="data-title">对局信息</h2>
+<dl class="metrics">
+<div class="metric"><dt>步数</dt><dd id="turn">—</dd></div>
+<div class="metric"><dt>分数</dt><dd id="score">—</dd></div>
+<div class="metric"><dt>最大方块</dt><dd id="max-tile">—</dd></div>
+</dl>
+<div class="action"><span id="action">等待模型走法</span><small id="timing">单步推理 —</small></div>
+<h3>方向选择概率</h3>
+<div id="probability" aria-label="模型在合法方向中的选择概率"></div>
+<p id="probability-caption">只显示真实推理结果，不代表获胜概率。</p>
+</section>
+<section class="card controls" aria-labelledby="controls-title">
+<h2 id="controls-title">控制</h2>
+<form id="start-form">
+<label>随机种子<input id="seed" type="number" min="0" max="2147483647" step="1" value="96652001" required></label>
+<label>步数上限<input id="cap" type="number" min="1" max="120" step="1" value="40" required></label>
+<button class="primary" id="start" type="submit" disabled>开始新局</button>
+</form>
+<div class="buttons">
+<button id="pause" type="button" disabled>暂停</button>
+<button id="resume" type="button" disabled>继续</button>
+<button id="stop" class="danger" type="button" disabled>停止</button>
+</div>
+<p class="notice" id="notice" role="status">正在等待云端连接。</p>
+</section>
+</div>
+</div>
+<footer><span id="source">来源：云端实时事件；不是预录演示</span><strong>KEV / 2048</strong></footer>
+</main>
+<script>
+'use strict';
+const $=id=>document.getElementById(id);
+const nodes={board:$('board'),status:$('status'),connection:$('connection'),route:$('route'),turn:$('turn'),score:$('score'),tile:$('max-tile'),action:$('action'),timing:$('timing'),notice:$('notice'),probability:$('probability'),caption:$('probability-caption'), seed:$('seed'),cap:$('cap'),start:$('start'),pause:$('pause'),resume:$('resume'),stop:$('stop')};
+const dirs={up:['↑','向上'],down:['↓','向下'],left:['←','向左'],right:['→','向右']};
+const names=dirs;
+const types={ready:'已就绪',loading:'加载模型',running:'推理进行中',move:'推理进行中',paused:'已暂停',terminal:'自然终局',cap:'达到上限',stopped:'已停止',error:'推理失败'};
+const states={connected:'已连接',connecting:'正在连接',disconnected:'连接中断',offline:'未运行服务'};
+const profile={frozen_v2:'冻结 V2',official_kev_0_8b:'官方 Kev 0.8B'};
+const keys=Object.keys(dirs);
+const owns=(o,k)=>Object.prototype.hasOwnProperty.call(o,k);
+const number=v=>Number.isFinite(v)?new Intl.NumberFormat('zh-CN').format(v):'—';
+const reduced=typeof matchMedia==='function'?matchMedia('(prefers-reduced-motion: reduce)'):null;
+const cells=Array.from({length:16},()=>{
+ const e=document.createElement('div');e.className='tile';e.setAttribute('aria-hidden','true');nodes.board.append(e);return e;
+});
+const probabilities={};
+for(const k of keys){
+ const row=document.createElement('div');row.className='prob';
+ const key=document.createElement('b');key.textContent=dirs[k][0];
+ const bar=document.createElement('div');bar.className='bar';
+ const fill=document.createElement('i');bar.append(fill);bar.setAttribute('aria-hidden','true');
+ const value=document.createElement('span');value.className='pvalue';value.textContent='—';
+ row.append(key,bar,value);nodes.probability.append(row);probabilities[k]={row,fill,value};
+}
+let current=null,lastMove=null,connection='connecting',events=null,pending=null;
+const retired=new Set();
+let effect=null,received=0,gap=false;
+const endings=new Set(['terminal','cap','stopped','error']);
+const notice=(s,error=false)=>{nodes.notice.textContent=s;nodes.notice.dataset.error=String(error)};
+function buttons(){
+ const status=current?.type, idle=status==='ready'||endings.has(status), active=!idle&&!!status;
+ const able=connection==='connected'&&!pending;
+ nodes.start.disabled=!able||!idle; nodes.seed.disabled=!able||!idle;nodes.cap.disabled=!able||!idle;
+ nodes.pause.disabled=!able||!active||status==='paused';nodes.resume.disabled=!able||status!=='paused';nodes.stop.disabled=!able||!active;
+}
+function connectState(v){
+ connection=v;nodes.connection.dataset.kind=v;nodes.connection.textContent=states[v];buttons();
+}
+function flatBoard(board){
+ if(!Array.isArray(board)||board.length!==4||board.some(r=>!Array.isArray(r)||r.length!==4))return null;
+ const flat=board.flat();return flat.every(x=>Number.isSafeInteger(x)&&x>=0&&x<=1048576&&(x===0||((x&(x-1))===0)))?flat:null;
+}
+function equal(a,b){return Array.isArray(a)&&Array.isArray(b)&&a.length===b.length&&a.every((v,i)=>v===b[i]);}
+function validFrame(f){
+ if(!f||typeof f!=='object'||!owns(types,f.type)||typeof f.run_id!=='string'||f.run_id.length>64||
+ !Number.isSafeInteger(f.seq)||f.seq<0||!Number.isSafeInteger(f.seed)||f.seed<0||
+ !Number.isSafeInteger(f.turn)||f.turn<0||!Number.isSafeInteger(f.score)||f.score<0)return false;
+ const after=flatBoard(f.board);
+ if(!after||f.tile!==Math.max(...after))return false;
+ if(f.type!=='move')return true;
+ const before=flatBoard(f.before),p=f.probabilities,s=f.spawn;
+ if(!before||!owns(dirs,f.action)||!p||typeof p!=='object'||!owns(p,f.action)||!Array.isArray(s)||s.length!==3||
+ !Number.isInteger(s[0])||!Number.isInteger(s[1])||s[0]<0||s[0]>3||s[1]<0||s[1]>3||![2,4].includes(s[2])||
+ !Number.isFinite(f.decision_ms)||f.decision_ms<0||!Number.isSafeInteger(f.gained)||f.gained<0||
+ after[4*s[0]+s[1]]!==s[2])return false;
+ const entries=Object.entries(p);
+ return entries.every(([k,v])=>owns(dirs,k)&&Number.isFinite(v)&&v>=0&&v<=1)&&
+ Math.abs(entries.reduce((a,[,v])=>a+v,0)-1)<1e-4&&p[f.action]===Math.max(...Object.values(p));
+}
+function paintBoard(board,spawn){
+ for(let i=0;i<16;i++){
+  const node=cells[i];node.dataset.value=board[i];node.textContent=board[i]||'';
+  node.classList.toggle('spawn',i===spawn);
+ }
+ const rows=Array.from({length:4},(_,i)=>board.slice(4*i,4*i+4).map(x=>x||'空').join('、'));
+ nodes.board.setAttribute('aria-label','棋盘：'+rows.join('；'));
+}
+function clearEffect(){
+ if(!effect)return;
+ const e=effect;effect=null;
+ e.timers.forEach(clearTimeout);e.animations.forEach(a=>a.cancel());e.layer.remove();
+ nodes.board.classList.toggle('is-sliding',false);
+}
+if(reduced?.addEventListener)reduced.addEventListener('change',()=>{if(reduced.matches)clearEffect()});
+window.addEventListener('resize',clearEffect);
+document.addEventListener('visibilitychange',()=>{if(document.hidden)clearEffect()});
+/* Deterministic one-slide visual layout, independent of the logged random spawn. */
+function slidePlan(board, direction) {
+ if (!Object.hasOwn(names,direction)) return null;
+ const vertical=direction==='up'||direction==='down';
+ const reverse=direction==='down'||direction==='right';
+ const slid=Array(16).fill(0), moves=[], merges=[];
+ for(let lane=0;lane<4;lane++){
+  const cells=Array.from({length:4},(_,i)=>vertical?4*i+lane:4*lane+i);
+  if(reverse) cells.reverse();
+  const used=cells.filter(i=>board[i]!==0);
+  for(let i=0,k=0;i<used.length;i++,k++){
+   const from=used[i], to=cells[k], value=board[from];
+   moves.push({from,to,value});
+   if(i+1<used.length && board[used[i+1]]===value){
+    moves.push({from:used[++i],to,value});
+    slid[to]=value*2;
+    merges.push(to);
+   }else slid[to]=value;
+  }
+ }
+ return {slid,moves,merges};
+}
+
+function motion(before,after,action,spawn){
+ if(reduced?.matches||document.hidden||typeof Element.prototype.animate!=='function')return;
+ const plan=slidePlan(before,action);
+ if(!plan||plan.slid[spawn]!==0||!after.every((v,i)=>i===spawn||v===plan.slid[i]))return;
+ const b=nodes.board.getBoundingClientRect();
+ if(!b.width||!b.height)return;
+ const rects=cells.map(node=>{
+  const r=node.getBoundingClientRect();return {x:r.left-b.left,y:r.top-b.top,w:r.width,h:r.height};
+ });
+ const layer=document.createElement('div');layer.className='fx-layer';layer.setAttribute('aria-hidden','true');
+ const fx={layer,timers:[],animations:[]};effect=fx;
+ nodes.board.classList.toggle('is-sliding',true);nodes.board.append(layer);
+ const tile=(cell,value,newBlock=false)=>{
+  const r=rects[cell],d=document.createElement('div');d.className='tile fx-tile'+(newBlock?' spawn':'');
+  d.textContent=value;d.dataset.value=value;
+  Object.assign(d.style,{left:r.x+'px',top:r.y+'px',width:r.w+'px',height:r.h+'px'});layer.append(d);return d;
+ };
+ const animate=(el,frames,opts)=>fx.animations.push(el.animate(frames,opts));
+ const defer=(ms,cb)=>fx.timers.push(setTimeout(()=>{if(effect===fx)cb()},ms));
+ for(const m of plan.moves){
+  const el=tile(m.from,m.value);if(m.from===m.to)continue;
+  const a=rects[m.from],z=rects[m.to];animate(el,[{transform:'translate(0,0)'},{transform:'translate('+(z.x-a.x)+'px,'+(z.y-a.y)+'px)'}],{duration:216,easing:'cubic-bezier(.23,.74,.35,1)',fill:'forwards'});
+ }
+ defer(216,()=>{
+  layer.replaceChildren();
+  for(const [i,v] of plan.slid.entries())if(v){
+   const el=tile(i,v);
+   if(plan.merges.includes(i))animate(el,[{transform:'scale(.92)'},{transform:'scale(1.14)',offset:.42},{transform:'scale(1)'}],{duration:108,easing:'ease-out'});
+  }
+ });
+ defer(324,()=>animate(tile(spawn,after[spawn],true),[{opacity:0,transform:'scale(.48)'},{opacity:1,transform:'scale(1.12)',offset:.65},{opacity:1,transform:'scale(1)'}],{duration:122,fill:'both',easing:'ease-out'}));
+ defer(446,clearEffect);
+}
+function render(f,repaint){
+ const board=flatBoard(f.board),move=lastMove?.turn===f.turn?lastMove:null;
+ const spawn=move?4*move.spawn[0]+move.spawn[1]:-1;
+ if(repaint)paintBoard(board,spawn);
+ const label=f.type==='move'&&f.stop&&endings.has(f.stop)?f.stop:f.type;
+ nodes.status.dataset.kind=label;nodes.status.textContent=types[label];
+ nodes.route.textContent=(profile[f.profile]||'Kev')+' · 种子 '+f.seed+(Number.isInteger(f.cap)?' · 上限 '+f.cap+' 步':'');
+ nodes.turn.textContent=number(f.turn);nodes.score.textContent=number(f.score);nodes.tile.textContent=number(f.tile);
+ nodes.action.textContent=move?dirs[move.action].join(' '):'等待模型走法';
+ nodes.timing.textContent=move?'单步推理 '+(move.decision_ms/1000).toFixed(2)+' 秒':'单步推理 —';
+ for(const k of keys){
+  const p=move?.probabilities;
+  const q=p&&owns(p,k)?p[k]:null;
+  const n=probabilities[k];n.fill.style.width=q===null?'0%':(q*100)+'%';
+  n.value.textContent=q!==null?(q*100).toFixed(1)+'%':move?'不可走':'—';
+  n.row.classList.toggle('chosen',k===move?.action);
+ }
+ if(label==='terminal')notice('已自然结束：没有合法走法。');
+ else if(label==='cap')notice('已达到设置的步数上限；不等于自然结束。');
+ else if(label==='stopped')notice('已停止，保留服务器最后确认的棋盘。');
+ else if(label==='error')notice(typeof f.message==='string'?f.message.slice(0,180):'服务器推理失败，未使用替代策略。',true);
+ else if(pending?.name==='pause'&&f.type!=='paused')notice('暂停请求已发送；如有一步正在推理，会在该步结束后暂停。');
+ else if(pending?.name==='stop')notice('已请求停止，等待服务器确认。');
+ else if (gap)notice('已同步服务器最新棋盘。中间未收到的帧没有补画。');
+ else if(label==='paused')notice('已暂停，点「继续」恢复云端推理。');
+ else if(label==='loading')notice('首次运行正在加载模型；加载完成前不会出现走法。');
+ else if(label==='running'||label==='move')notice('正在等下一步云端推理。');
+ else notice('云端已就绪，可开始一局。');
+ buttons();
+}
+function accept(f,source='event',startedAt=received){
+ if(!validFrame(f)||retired.has(f.run_id))return false;
+ const same=current?.run_id===f.run_id, prior=current;
+ if(same&&(f.seq<=prior.seq||f.turn<prior.turn))return false;
+ // GET or command responses that raced a streamed replacement may not reset the new run.
+ if(!same&&prior&&source!=='event'&&startedAt!==received)return false;
+ if(prior&&!same){retired.add(prior.run_id);lastMove=null;gap=false;clearEffect()}
+ const contiguous=!!same&&source==='event'&&connection==='connected'&&f.seq===prior.seq+1&&f.turn===prior.turn+1&&
+  f.type==='move'&&equal(flatBoard(prior.board),flatBoard(f.before));
+ if(same&&f.seq>prior.seq+1)gap=true;
+ else if(contiguous)gap=false;
+ if(f.type==='move')lastMove=f;
+ else if(!lastMove||lastMove.turn!==f.turn)lastMove=null;
+ const repaint=!same||!prior||f.turn!==prior.turn||f.type==='move';
+ if(repaint)clearEffect();
+ current=f;received++;
+ if(pending&&((pending.name==='pause'&&f.type==='paused')||(pending.name==='resume'&&f.type==='running')||
+   (pending.name==='start'&&!same)||(pending.name==='stop'&&endings.has(f.type))||endings.has(f.type)))pending=null;
+ render(f,repaint);
+ if(contiguous)motion(flatBoard(f.before),flatBoard(f.board),f.action,4*f.spawn[0]+f.spawn[1]);
+ return true;
+}
+async function refresh(){
+ const stamp=received;
+ try{
+  const r=await fetch('/state',{cache:'no-store'});
+  if(r.ok)accept(await r.json(),'snapshot',stamp);
+ }catch{}
+}
+async function command(name,data={}){
+ if(connection!=='connected'||pending)return;
+ const token={name};pending=token;buttons();
+ const labels={start:'正在向云端请求开始新局。',pause:'暂停请求已发送；如有一步正在推理，会在该步结束后暂停。',resume:'已请求继续，等待服务器确认。',stop:'已请求停止，等待服务器确认。'};
+ notice(labels[name]);const stamp=received;
+ try{
+  const r=await fetch('/'+name,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+  const f=await r.json();
+  if(!r.ok)throw Error(typeof f.error==='string'?f.error:'请求失败');
+  accept(f,'command',stamp);
+  // Keep pending until an actual status when pausing/stopping/resuming.
+  if(name==='start'&&pending===token){pending=null;buttons()}
+ }catch(err){
+  if(pending===token){pending=null;buttons();notice('云端未确认此操作：'+String(err.message||err).slice(0,140),true)}
+  refresh();
+ }
+}
+$('start-form').addEventListener('submit',e=>{
+ e.preventDefault();if(nodes.start.disabled)return;
+ const seed=nodes.seed.valueAsNumber,cap=nodes.cap.valueAsNumber;
+ if(!Number.isSafeInteger(seed)||seed<0||seed>2147483647||!Number.isInteger(cap)||cap<1||cap>120){
+  notice('请输入有效的整数种子和 1–120 步的上限。',true);return;
+ }
+ command('start',{seed,cap});
+});
+for(const name of ['pause','resume','stop'])nodes[name].addEventListener('click',()=>{if(!nodes[name].disabled)command(name)});
+function openEvents(){
+ if(typeof EventSource!=='function'||location.protocol!=='http:'||!['127.0.0.1','localhost'].includes(location.hostname)){
+  connectState('offline');notice('此页面需要在云端实况服务中打开；离线文件不会运行或模拟推理。',true);return;
+ }
+ // Snapshot first: if joining an existing run, skip older retained events.
+ Promise.race([refresh(),new Promise(resolve=>setTimeout(resolve,900))]).then(()=>{
+  events=new EventSource('/events');
+  events.addEventListener('open',()=>{const was=connection;connectState('connected');if(was==='disconnected')refresh()});
+  events.addEventListener('frame',e=>{
+   try {const frame=JSON.parse(e.data); if(!accept(frame)&&!validFrame(frame))notice('收到无效的云端帧，棋盘未更新。',true);}
+   catch{notice('收到无效的云端帧，棋盘未更新。',true)}
+  });
+  events.addEventListener('error',()=>{
+   connectState('disconnected');clearEffect();notice('连接中断，保留上一帧；重连后会同步云端最新状态。',true);
+  });
+ });
+}
+openEvents();
+
+</script>
+</body>
+</html>

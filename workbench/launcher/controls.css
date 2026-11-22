@@ -1,0 +1,29 @@
+.arcade-nav{display:flex;gap:7px;align-items:center;flex-wrap:wrap;margin:16px 0 0}
+.arcade-nav button,.monitor-filters button{border:1px solid #dce6f2;border-radius:10px;background:#fff;color:#3e5370;padding:8px 13px;font:inherit;cursor:pointer}
+.arcade-nav button[aria-selected="true"],.monitor-filters button[aria-pressed="true"]{color:#fff;background:var(--indigo);border-color:var(--indigo)}
+.monitor-pane{padding:13px 0 24px}
+.monitor-header{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;margin:6px 0 12px}
+.monitor-header h1{font-size:clamp(25px,4vw,38px);margin-bottom:5px}
+.monitor-header p,.monitor-meta,.monitor-history{font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.monitor-filters{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
+.monitor-filters button{font-size:13px;padding:6px 10px}
+#monitor-sources{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:14px;align-items:start}
+.monitor-card,.monitor-empty{padding:14px;min-width:0;overflow-wrap:anywhere}
+.monitor-empty{grid-column:1/-1;color:var(--muted);font-size:14px}
+.monitor-top{display:flex;justify-content:space-between;align-items:flex-start;gap:10px}
+.monitor-top h2{font-size:19px;line-height:1.2;margin:0 0 5px}
+.monitor-stage{font-size:14px;font-weight:710;margin:8px 0 6px}
+.pill[data-tone="active"]{background:#e5f5ed;color:#176d55}
+.pill[data-tone="old"]{background:#fff2da;color:#785120}
+.pill[data-tone="error"]{background:#fcece8;color:var(--coral)}
+.monitor-progress{height:9px;width:100%;accent-color:var(--indigo)}
+.monitor-metrics{display:grid;grid-template-columns:repeat(auto-fit,minmax(112px,1fr));gap:6px;margin:7px 0}
+.monitor-metric{background:#f2f6fb;border-radius:8px;padding:7px 8px}
+.monitor-metric dt{color:var(--muted);font-size:11px}
+.monitor-metric dd{margin:0;font-weight:700;font-size:16px}
+.monitor-card h3{font-size:13px;margin:11px 0 4px}
+.monitor-board{aspect-ratio:1;width:min(100%,190px);display:grid;grid-template:repeat(4,1fr)/repeat(4,1fr);gap:4px;padding:5px;background:#d3ddeb;border-radius:10px}
+.monitor-board .tile{font-size:16px;border-radius:7px}
+.monitor-history{padding-left:1.3em;margin:0}
+.monitor-history li{margin:2px 0}
+@media(max-width:650px){.arcade-nav{margin-top:10px}.arcade-nav button{font-size:13px;padding:6px 9px}.monitor-header p,.monitor-meta,.monitor-history{font-size:11px}#monitor-sources{grid-template-columns:1fr}.monitor-card,.monitor-empty{padding:10px}.monitor-top h2{font-size:17px}}
