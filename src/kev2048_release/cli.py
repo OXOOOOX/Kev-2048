@@ -40,7 +40,10 @@ def main():
         if a.command=="train" and a.feature_cache is not None and a.preset!="stock":p.error("--feature-cache requires --preset stock")
         os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG",":4096:8")
         from . import native
-        if a.command=="train":out=native.train(a,*data.checked(a.data))
+        if a.command=="train":
+            from .training_progress import watch_training
+            with watch_training(a.out,a.command):
+                out=native.train(a,*data.checked(a.data))
         else:out=native.play(a)
     print(json.dumps(out,allow_nan=False,indent=2))
 
