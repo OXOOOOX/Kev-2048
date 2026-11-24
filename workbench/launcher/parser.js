@@ -1,10 +1,13 @@
 /* Independent offline verifier; never evaluates imported data as code. */
 (function (root) {
   'use strict';
-  const MAX_BYTES = 16 * 1024 * 1024, MAX_ROWS = 25000, MAX_TRACKS = 128, MAX_TURNS = 10000;
+  // A standard 4×4 board can hold at most 4*(2**16-1) tile points.
+  // Each move spawns at least 2. This bounds a real recording, not play itself.
+  const MAX_TURNS = 131068, MAX_BYTES = 128 * 1024 * 1024, MAX_ROWS = MAX_TURNS + 2, MAX_TRACKS = 128;
+  const STANDARD_BYTES = 16 * 1024 * 1024, STANDARD_ROWS = 25000, STANDARD_TURNS = 10000;
   const DIRS = ['up','down','left','right'];
-  const END = new Map([['terminal','terminal'],['cap','cap'],['capped','cap'],['stopped','stopped'],['error','incomplete'],['incomplete','incomplete']]);
-  const EVENTS = new Set(['ready','loading','running','paused','move','terminal','cap','capped','stopped','error','incomplete']);
+  const END = new Map([['terminal','terminal'],['target','target'],['cap','cap'],['capped','cap'],['stopped','stopped'],['error','incomplete'],['incomplete','incomplete']]);
+  const EVENTS = new Set(['ready','loading','running','paused','move',...END.keys()]);
   let imports = 0;
   function fail(s) { throw new Error(s); }
   function obj(x) { return x !== null && typeof x === 'object' && !Array.isArray(x); }
@@ -42,8 +45,6 @@
   }
   function legal(b) { return DIRS.filter(d => !eq(slide(b,d).b,b)); }
   function decode(text) {
-    if (typeof text !== 'string') fail('只接受本地文本回放');
-    if (text.length > MAX_BYTES || new TextEncoder().encode(text).byteLength > MAX_BYTES) fail('文件超过 16 MiB');
     text = text.trimStart().replace(/^\uFEFF/, '').trim();
     if (!text || !/^[{[]/.test(text)) fail('只支持 JSON 或 JSONL 逐步记录');
     let x, parsed = false;
@@ -57,7 +58,7 @@
           return x[recognized[0]].map(row => {
             if (!obj(row)) return row;
             const out={...row};
-            for (const k of ['seed','policy','profile','run_id','cap']) {
+            for (const k of ['seed','policy','profile','run_id','cap','mode']) {
               if (has(x,k) && has(row,k) && x[k] !== row[k]) fail('分组字段与步骤冲突');
               if (has(x,k) && !has(row,k)) out[k]=x[k];
             }
@@ -80,9 +81,18 @@
     if (!END.has(x)) fail('未知结束类型');
     return END.get(x);
   }
+  function stopFits(stop, terminal, max, previousMax, mode) {
+    if (mode==='endless' && (stop==='target' || stop==='cap')) return false;
+    if (stop === 'target') return max >= 2048 && previousMax < 2048;
+    return (stop === 'terminal') === terminal;
+  }
   function parseTrace(text, sourceName='导入记录') {
+    if (typeof text !== 'string') fail('只接受本地文本回放');
+    const bytes = text.length > MAX_BYTES ? Infinity : new TextEncoder().encode(text).byteLength;
+    if (bytes > MAX_BYTES) fail('文件超过 128 MiB');
     const rows=decode(text);
     if (!rows.length || rows.length > MAX_ROWS) fail('空记录或记录数超限');
+    const large = bytes > STANDARD_BYTES || rows.length > STANDARD_ROWS;
     const sourceId='import-'+(++imports);
     const file=(String(sourceName).split(/[\\/]/).pop()||'导入记录').replace(/[\x00-\x1f\x7f]/g,'').slice(0,160);
     const groups=new Map();
@@ -92,6 +102,9 @@
       try {
         const r=record;
         if (!obj(r)) fail('步骤必须为对象');
+        const endless=r.mode==='endless';
+        if (large && !endless) fail('普通回放最多支持 16 MiB、25000 行');
+        if (endless && r.cap!==null) fail('无尽模式不能设置步数上限');
         if (has(r,'type') && !EVENTS.has(r.type)) fail('未知事件类型');
         // A server's ready greeting is not a run and has no trusted trajectory.
         if (r.type==='ready' && !r.run_id && r.turn===0 && !has(r,'action')) continue;
@@ -104,15 +117,16 @@
         if (!g) {
           if (groups.size>=MAX_TRACKS) fail('对局轨道数超限');
           g={id:sourceId+'-game-'+groups.size,sourceId,file,seed:r.seed,label:p,policy:p,runId:r.run_id??null,frames:[],
-             status:'incomplete',cap:null,ended:false,seq:null,opening:null};
+             mode:endless?'endless':null,status:'incomplete',cap:null,ended:false,seq:null,opening:null};
           groups.set(key,g);
         }
+        if (endless!==(g.mode==='endless')) fail('同一对局的玩法不一致');
         if (has(r,'seq')) {
           if (!Number.isSafeInteger(r.seq) || r.seq<0 || (g.seq!==null && r.seq<=g.seq)) fail('事件序号没有严格递增');
           g.seq=r.seq;
         }
         if (has(r,'cap') && r.cap!==null) {
-          if (!Number.isSafeInteger(r.cap) || r.cap<1 || r.cap>MAX_TURNS || (g.cap!==null && g.cap!==r.cap)) fail('无效或互相矛盾的步数上限');
+          if (!Number.isSafeInteger(r.cap) || r.cap<1 || r.cap>STANDARD_TURNS || (g.cap!==null && g.cap!==r.cap)) fail('无效或互相矛盾的步数上限');
           g.cap=r.cap;
         }
         if (has(r,'type') && r.type!=='move') {
@@ -133,7 +147,7 @@
               fail('无可重放的走子');
             }
             if (g.ended && final!==g.status) fail('结束事件相互矛盾');
-            if ((final==='terminal')!==(!legal(current.b).length)) fail('结束类型与棋局状态不一致');
+            if (!stopFits(final,!legal(current.b).length,current.m,g.frames.at(-2)?.m,g.mode)) fail('结束类型与棋局状态不一致');
             if (final==='cap' && g.cap!==null && current.p!==g.cap) fail('结束步数不是上限');
             if (stopOf(r.stop)!==null && stopOf(r.stop)!==final) fail('结束标记相互矛盾');
             g.status=final; g.ended=true;
@@ -142,7 +156,7 @@
         }
         if (g.ended) fail('结束后还有走子');
         const turn=r.turn;
-        if (!Number.isSafeInteger(turn) || turn<1 || turn>MAX_TURNS || (g.cap!==null && turn>g.cap)) fail('无效步数');
+        if (!Number.isSafeInteger(turn) || turn<1 || turn>(endless?MAX_TURNS:STANDARD_TURNS) || (g.cap!==null && turn>g.cap)) fail('无效步数');
         const prev=board(r.before), next=board(has(r,'after') ? r.after : r.board);
         if (has(r,'after') && has(r,'board') && !eq(next,board(r.board))) fail('两种结果棋盘冲突');
         if (!g.frames.length) {
@@ -169,8 +183,8 @@
         for (const k of ['tile','max_tile']) if (has(r,k) && r[k]!==max) fail('最大方块与棋盘不一致');
         const available=legal(next);
         if (has(r,'terminal') && (typeof r.terminal!=='boolean' || r.terminal!==!available.length)) fail('终局标记与可走方向矛盾');
-        const stop=stopOf(r.stop ?? (['capped','cap','stopped'].includes(r.status)?r.status:null));
-        if (stop && (stop==='terminal')!==(!available.length)) fail('结束标记与棋盘矛盾');
+        const stop=stopOf(r.stop ?? (['capped','cap','stopped','target'].includes(r.status)?r.status:null));
+        if (stop && !stopFits(stop,!available.length,max,current.m,g.mode)) fail('结束标记与棋盘矛盾');
         if (stop==='cap' && g.cap!==null && turn!==g.cap) fail('标记截断的步数不是上限');
         g.frames.push({p:turn,b:next,s:score,m:max,a:action,g:moved.gain,n});
         if (stop || !available.length || (g.cap!==null && turn===g.cap)) {
@@ -182,7 +196,7 @@
     const out=[...groups.values()].filter(g=>g.frames.length>1);
     if (!out.length) fail('没有可验证的完整走子');
     if (out.length!==groups.size) fail('文件混有不能回放的运行');
-    return out.map(({id,file,sourceId,seed,label,policy,runId,cap,frames,status}) => ({id,file,sourceId,seed,label,policy,runId,cap,frames,status}));
+    return out.map(({id,file,sourceId,seed,label,policy,runId,cap,mode,frames,status}) => ({id,file,sourceId,seed,label,policy,runId,cap,mode,frames,status}));
   }
   const api={parseTrace,MAX_BYTES,MAX_ROWS,MAX_TRACKS,MAX_TURNS};
   root.KevTrace=api;

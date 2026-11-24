@@ -1,5 +1,6 @@
 'use strict';
 const assert = require('node:assert/strict'), fs = require('node:fs'), path = require('node:path');
+const {createHash} = require('node:crypto');
 const trace = require('./launcher/parser.js'), runs = require('./launcher/runs.js');
 const sample = fs.readFileSync(path.join(__dirname, 'samples/sample-events.jsonl'), 'utf8');
 const nativeRows = sample.trim().split('\n').map(line => {
@@ -10,6 +11,7 @@ const nativeRows = sample.trim().split('\n').map(line => {
 const native = nativeRows.map(row => JSON.stringify(row)).join('\n');
 const game = trace.parseTrace(native)[0], end = game.frames.at(-1);
 const hashA = 'a'.repeat(64), hashB = 'b'.repeat(64);
+const sha256 = data => createHash('sha256').update(data).digest('hex');
 const summary = () => ({checkpoint_head_sha256: hashA, device: 'cuda', cap: 4,
   games: [{seed: game.seed, turn: end.p, score: end.s, tile: end.m, stop: 'cap'}]});
 const manifest = () => ({schema_version: 1, kind: 'play', variant: 'Stock 训练版', status: 'planned',
@@ -25,9 +27,105 @@ function bundle(result = summary(), run = manifest()) {
   return [file('runs/a/moves.jsonl', native), ...(result ? [file('runs/a/result.json', result)] : []),
     ...(run ? [file('runs/a/run.json', run)] : [])];
 }
+function gameplayFixture(arm = 'official', moves, tail) {
+  if (!moves) {
+    const rows = nativeRows.map(({type, run_id, seq, board, tile, decision_ms, ...row}) =>
+      ({...row, after: board, max_tile: tile, stop: null}));
+    rows.at(-1).stop = 'capped';
+    tail = rows.at(-1);
+    moves = rows.map(row => JSON.stringify(row)).join('\n') + '\n';
+  }
+  const {seed, turn, score, max_tile, stop} = tail;
+  const cap = stop === 'capped' ? turn : 5000;
+  const metadata = {arm, split: 'gameplay_dev', run_identity: hashB, checkpoint_head_sha256: hashA,
+    device: 'cuda', dtype: 'fp32', temperature: 1};
+  return {moves, result: {...metadata, schema_version: 1, seed, cap, turn, score, max_tile, stop,
+    moves_sha256: sha256(moves)}, identity: {schema_version: 1, seed, cap, metadata}};
+}
+function gameplayFiles(fixture, dir = '') {
+  return [file(dir + 'moves.jsonl', fixture.moves), file(dir + 'result.json', fixture.result),
+    file(dir + 'identity.json', fixture.identity)];
+}
 async function load(files, options) { return runs.loadRun(runs.describeFiles(files, options)[0]); }
+async function preview(files) { return runs.describeReplay(runs.describeFiles(files)[0]); }
+function expectedMilestones(game) {
+  return Object.fromEntries([512, 1024, 2048].flatMap(tile => {
+    const frame = game.frames.find(row => row.m >= tile);
+    return frame ? [[tile, frame.p]] : [];
+  }));
+}
 async function test(name, fn) { await fn(); checks++; }
 (async () => {
+  await test('folder previews use one-row and multi-game summaries without loading moves', async () => {
+    const reported = '2026-01-31T20:00:00+08:00';
+    const fixture = gameplayFixture(); fixture.result.ended_at_utc = reported;
+    const files = gameplayFiles(fixture, `runs/gameplay/official/${game.seed}/`), before = reads;
+    const [one] = await preview(files);
+    assert.deepEqual(one, {model:'官方基线', seed:game.seed, turns:end.p, score:end.s, max_tile:end.m,
+      replayIdentity:[hashB,'official',game.seed,fixture.result.moves_sha256].join('/'),
+      time:'2026-01-31T12:00:00.000Z', timeSource:'reported', policy:null, runId:null, milestones:{}});
+    assert.equal(reads, before + 2);
+    const result = summary(), run = manifest();
+    result.games.push({seed:25123, turn:40, score:256, tile:32});
+    const two = await preview(bundle(result, run));
+    assert.deepEqual(two.map(row => [row.model, row.seed, row.turns, row.score, row.max_tile]), [
+      ['Stock 训练版', game.seed, end.p, end.s, end.m], ['Stock 训练版', 25123, 40, 256, 32],
+    ]);
+    assert.equal(two[1].timeSource, 'modified');
+    assert.equal(reads, before + 4);
+  });
+  await test('trace previews preserve model choices on the same seed', async () => {
+    const rows = ['first', 'second'].flatMap(policy => nativeRows.map(row => ({...row, policy})));
+    const files = [file('traces/stock.jsonl', rows.map(row => JSON.stringify(row)).join('\n'))];
+    const listed = await preview(files);
+    assert.deepEqual(listed.map(row => [row.model, row.seed, row.policy, row.runId, row.score]), [
+      ['first', game.seed, 'first', nativeRows[0].run_id, end.s],
+      ['second', game.seed, 'second', nativeRows[0].run_id, end.s],
+    ]);
+    assert.deepEqual((await load(files)).games.map(row => row.policy), ['first', 'second']);
+  });
+  await test('milestones follow exact trace tracks and require an observed opening', async () => {
+    const times = (policy, run_id, tiles) => tiles.map((tile, i) => ({
+      seed:123, policy, run_id, turn:i+1, score:16000, max_tile:tile,
+    }));
+    const rows = [...times('first', 'one', [4, 512, 512, 1024, 2048, 2048]),
+      ...times('first', 'two', [4, 256, 512, 1024, 2048, 2048]),
+      ...times('second', 'one', [4, 256, 256, 512, 1024, 2048]),
+      ...times('partial', 'three', [4, 256, 512, 1024, 2048]).slice(1)];
+    const moves = file('runs/a/moves.jsonl', rows.map(row => JSON.stringify(row)).join('\n'));
+    assert.deepEqual((await preview([moves])).map(row => row.milestones), [
+      {512:2, 1024:4, 2048:5}, {512:3, 1024:4, 2048:5}, {512:4, 1024:5, 2048:6}, {},
+    ]);
+    const tail = {seed:123, turn:6, score:16000, tile:2048};
+    const withResult = row => [moves, file('runs/a/result.json', {games:[row]})];
+    assert.deepEqual((await preview(withResult(tail)))[0].milestones, {});
+    const [specific] = await preview(withResult({...tail, policy:'first', run_id:'two'}));
+    assert.deepEqual([specific.policy, specific.runId, specific.milestones], ['first', 'two', {512:3, 1024:4, 2048:5}]);
+    assert.deepEqual((await preview(withResult({...tail, policy:'first', run_id:'two', score:16004})))[0].milestones, {});
+    const [unknown] = await preview(withResult({seed:123, policy:'first', run_id:'one'}));
+    assert.deepEqual([unknown.turns, unknown.score, unknown.max_tile, unknown.milestones],
+      [6, 16000, 2048, {512:2, 1024:4, 2048:5}]);
+  });
+  await test('large summary-free traces include early games, and retain unobserved manifest seeds', async () => {
+    const timestamp = '2026-01-30T23:09:31.000Z';
+    const first = {seed:123, turn:490, tile:2048, score:20320, timestamp};
+    const later = nativeRows.map(row => ({...row, tile:undefined, detail:'x'.repeat(600 * 1024)}));
+    const source = file('runs/a/moves.jsonl', [first, ...later].map(row => JSON.stringify(row)).join('\n'));
+    assert(source.size > 2 * 1024 * 1024 && source.size < trace.MAX_BYTES);
+    const manifestSeeds = {...manifest(), seeds:[123, game.seed, 456]};
+    const rows = await preview([source, file('runs/a/run.json', manifestSeeds)]);
+    assert.deepEqual(rows.map(row => [row.seed, row.turns, row.max_tile, row.timeSource]), [
+      [123, 490, 2048, 'reported'], [game.seed, end.p, end.m, 'modified'], [456, null, null, 'modified'],
+    ]);
+    assert.equal(rows[0].time, timestamp);
+  });
+  await test('preview errors are recoverable and loading still validates the trace', async () => {
+    const files = [file('runs/unreadable/moves.jsonl', 'invalid', {lastModified:0}),
+      file('runs/unreadable/result.json', '{')];
+    assert.deepEqual(await preview(files), [{model:'unreadable', seed:null, turns:null, score:null,
+      max_tile:null, time:null, timeSource:null, policy:null, runId:null, milestones:{}}]);
+    await assert.rejects(load(files), /moves\.jsonl/);
+  });
   await test('enumeration is lazy and budgets include companions', async () => {
     const files = bundle(), before = reads, [entry] = runs.describeFiles(files);
     assert.equal(reads, before);
@@ -158,6 +256,66 @@ async function test(name, fn) { await fn(); checks++; }
     const invalid = bundle(); invalid[1] = file('runs/a/result.json', '{');
     await assert.rejects(load(invalid), /runs\/a\/result\.json.*完整 JSON/);
   });
+  await test('single gameplay summaries and identity companions import in both modes', async () => {
+    const fixture = gameplayFixture();
+    for (const [dir, direct] of [['runs/gameplay/official/' + game.seed + '/', false], ['', true]]) {
+      const files = gameplayFiles(fixture, dir), before = reads;
+      const entries = runs.describeFiles(files, {direct});
+      assert.equal(reads, before);
+      assert.equal(runs.isTraceCandidate(files[2]), false);
+      assert.equal(entries.length, 1);
+      assert.equal(entries[0].path, dir + 'moves.jsonl');
+      assert.equal(entries[0].bytes, files.reduce((n, f) => n + f.size, 0));
+      const loaded = await runs.loadRun(entries[0]);
+      assert.equal(loaded.title, '官方基线');
+      assert.equal(loaded.headSha, hashA);
+      assert.equal(loaded.device, 'cuda');
+      assert.equal(loaded.games[0].runTitle, loaded.title);
+      assert.equal(loaded.games[0].status, 'cap');
+      assert.equal(loaded.games[0].frames.length, 5);
+    }
+    const files = gameplayFiles(fixture, 'runs/gameplay/official/' + game.seed + '/');
+    assert.equal((await load(files.slice(0, 2))).title, '官方基线');
+    const config = file('runs/gameplay/implementation/configs/gameplay-head-2000.json', {seed_group_size: 8});
+    assert.equal(runs.describeFiles([...files, config]).length, 1);
+    const foreign = file('runs/other/identity.json', fixture.identity);
+    const foreignEntries = runs.describeFiles([files[0], foreign]);
+    assert.equal(foreignEntries.length, 1);
+    assert.equal((await runs.loadRun(foreignEntries[0])).headSha, null);
+  });
+  await test('all three models retain their names when viewing the same seed', async () => {
+    const models = [['official', '官方基线'], ['lr8e-5-kl003', 'lr8e-5-kl003'], ['lr8e-5-kl015', 'lr8e-5-kl015']];
+    const folders = models.flatMap(([arm]) =>
+      gameplayFiles(gameplayFixture(arm), 'runs/gameplay/' + arm + '/' + game.seed + '/'));
+    const loaded = await Promise.all(runs.describeFiles(folders).map(runs.loadRun));
+    assert.deepEqual(loaded.map(run => run.title), models.map(([, title]) => title));
+    for (const [arm, title] of models) {
+      const [moves, , identity] = gameplayFiles(gameplayFixture(arm));
+      const identityOnly = await load([moves, identity], {direct: true});
+      assert.equal(identityOnly.title, title);
+      assert.equal(identityOnly.headSha, hashA);
+      const movePath = 'runs/gameplay/' + arm + '/' + game.seed + '/moves.jsonl';
+      assert.equal((await load([file(movePath, gameplayFixture(arm).moves)])).title, title);
+    }
+  });
+  await test('single gameplay summaries validate input identity, tail, caps and move file digest', async () => {
+    const dir = 'runs/gameplay/official/' + game.seed + '/';
+    for (const field of ['seed', 'turn', 'score', 'max_tile', 'cap']) {
+      const fixture = gameplayFixture();
+      fixture.result[field]++;
+      await assert.rejects(load(gameplayFiles(fixture, dir)), /result\.json.*不一致|result\.json.*冲突/);
+    }
+    for (const [field, value] of [['checkpoint_head_sha256', hashB], ['arm', 'wrong-arm'], ['run_identity', hashA]]) {
+      const fixture = gameplayFixture();
+      fixture.result[field] = value;
+      await assert.rejects(load(gameplayFiles(fixture, dir)), /result\.json.*不一致|result\.json.*冲突/);
+    }
+    const fixture = gameplayFixture(), files = gameplayFiles(fixture, dir);
+    files[0] = file(dir + 'moves.jsonl', '\n' + fixture.moves);
+    await assert.rejects(load(files), /SHA-256|哈希|校验|指纹/);
+    fixture.result.stop = 'target';
+    await assert.rejects(load(gameplayFiles(fixture, dir)), /目标|2048|结束/);
+  });
   let localRuns = 0;
   for (const name of ['official-kev', 'stock-01-cuda']) {
     const dir = path.join(__dirname, '..', 'runs', 'stock-gameplay-cuda', name);
@@ -171,5 +329,71 @@ async function test(name, fn) { await fn(); checks++; }
     });
     localRuns++;
   }
-  console.log('PASS run imports: ' + checks + ' scenarios; ' + localRuns + ' local CUDA bundles; lazy enumeration, identity/tail/stop matching, ambiguity rejection, legacy and JSON support.');
+  const calibration = path.join(__dirname, '..', 'runs', 'preparation-20261123', 'calibration', 'd3', '2611230000', 'moves.jsonl');
+  if (fs.existsSync(calibration)) {
+    await test('first 2048 target is preserved as the end of the replay', async () => {
+      const moves = fs.readFileSync(calibration, 'utf8'), tail = JSON.parse(moves.trimEnd().split('\n').at(-1));
+      assert.equal(tail.stop, 'target');
+      const loaded = await load(gameplayFiles(gameplayFixture('official', moves, tail), 'runs/target/'));
+      assert.equal(loaded.games[0].status, 'target');
+      assert.equal(loaded.games[0].frames.at(-1).m, 2048);
+      assert(loaded.games[0].frames.slice(0, -1).every(frame => frame.m < 2048));
+      const following = sample.trimEnd().split('\n').map(line =>
+        JSON.stringify({...JSON.parse(line), detail:'x'.repeat(600 * 1024)}));
+      const combined = [file('traces/moves.jsonl', [moves.trimEnd(), ...following].join('\n'))];
+      assert(combined[0].size > 2 * 1024 * 1024);
+      const listed = await preview(combined);
+      assert.deepEqual(listed.map(row => [row.seed, row.max_tile]), [[tail.seed, 2048], [game.seed, end.m]]);
+      assert.deepEqual(listed[0].milestones, expectedMilestones(loaded.games[0]));
+      assert.deepEqual((await load(combined)).games.map(row => row.status), ['target', 'cap']);
+    });
+  }
+  let gameplayRuns = 0, milestoneRuns = 0, originalFiles = 0;
+  const evalDir = path.join(__dirname, '..', 'runs', 'gameplay-dev-head2000-20261123');
+  const reportPath = path.join(evalDir, 'result.json');
+  if (fs.existsSync(reportPath) && JSON.parse(fs.readFileSync(reportPath, 'utf8')).status === 'completed') {
+    await test('all completed gameplay development traces import without changing originals', async () => {
+      const originals = new Map();
+      const readOriginal = diskPath => {
+        const bytes = fs.readFileSync(diskPath);
+        originals.set(diskPath, sha256(bytes));
+        return bytes;
+      };
+      readOriginal(reportPath);
+      const manifest = JSON.parse(readOriginal(path.join(evalDir, 'resolved-config.json')));
+      assert.equal(manifest.seeds.length, 100);
+      const arms = Object.keys(manifest.checkpoints);
+      assert.equal(arms.length, 3);
+      for (const arm of arms) for (const seed of manifest.seeds) {
+        const [moves, result, identity] = ['moves.jsonl', 'result.json', 'identity.json'].map(base => {
+          const relative = path.join(arm, String(seed), base);
+          return file('runs/gameplay-dev-head2000-20261123/' + relative.replaceAll('\\', '/'),
+            readOriginal(path.join(evalDir, relative)).toString('utf8'));
+        });
+        const summary = JSON.parse(await result.text());
+        const entries = runs.describeFiles([moves, result, identity]);
+        assert.equal(entries.length, 1);
+        const loaded = await runs.loadRun(entries[0]);
+        assert.equal(loaded.title, arm === 'official' ? '官方基线' : arm);
+        assert.equal(loaded.headSha, summary.checkpoint_head_sha256);
+        assert.equal(loaded.device, summary.device);
+        assert.equal(loaded.games.length, 1);
+        const game = loaded.games[0], end = game.frames.at(-1);
+        assert.equal(game.seed, seed);
+        assert.equal(game.status, summary.stop === 'capped' ? 'cap' : summary.stop);
+        assert.deepEqual([end.p, end.s, end.m], [summary.turn, summary.score, summary.max_tile]);
+        const before = reads, [listed] = await runs.describeReplay(entries[0]);
+        assert.deepEqual(listed.milestones, expectedMilestones(game));
+        const eligible = summary.max_tile >= 512;
+        assert.equal(reads - before, eligible ? 3 : 2);
+        milestoneRuns += Number(eligible);
+        gameplayRuns++;
+      }
+      assert.equal(gameplayRuns, 300);
+      for (const [diskPath, before] of originals) assert.equal(sha256(fs.readFileSync(diskPath)), before, diskPath);
+      originalFiles = originals.size;
+    });
+  }
+  console.log('PASS run imports: ' + checks + ' scenarios; ' + localRuns + ' local CUDA bundles; ' +
+    gameplayRuns + ' gameplay development bundles, ' + milestoneRuns + ' with milestones; ' + originalFiles + ' originals byte-identical.');
 })().catch(error => {console.error(error); process.exitCode = 1;});

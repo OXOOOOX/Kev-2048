@@ -76,6 +76,7 @@ code{white-space:nowrap}
 @media(max-width:650px){main{width:calc(100% - 24px);max-width:500px}header{height:50px;gap:8px}.crumb{font-size:11px;padding-left:6px}.brand{font-size:13px;gap:6px}.logo{grid-template-columns:repeat(2,7px);gap:2px}.logo i{width:7px;height:7px}.pill{font-size:11px;padding:4px 6px;gap:5px}.pill::before{width:6px;height:6px}.intro{padding:12px 0}.sub{font-size:12px}.desk{grid-template-columns:1fr}.board-card{padding:9px}.board{padding:6px;gap:4px}.tile{border-radius:7px}.board-top{margin-bottom:6px}.board-top h2{font-size:18px}.board-foot{font-size:11px;margin-top:6px}.side{grid-template-columns:1fr}.metric dd{font-size:22px}.side section,.controls{padding:10px}footer{font-size:11px}}
 @media(prefers-reduced-motion:reduce){*,*::before,*::after{scroll-behavior:auto!important}}
 </style>
+<link rel="stylesheet" href="launcher/studio-monitor.css">
 </head>
 <body>
 <main>
@@ -90,7 +91,7 @@ code{white-space:nowrap}
 <div class="desk">
 <section class="card board-card" aria-labelledby="board-title">
 <div class="board-top"><h2 id="board-title">当前棋盘</h2><span class="pill" id="status" data-kind="ready">等待状态</span></div>
-<div class="board" id="board" role="img" aria-label="棋盘尚未启动"></div>
+<div class="board" id="board" data-tile-motion role="img" aria-label="棋盘尚未启动"></div>
 <div class="board-foot"><span id="route">等待云端推理</span><span>描边 = 本步新方块</span></div>
 </section>
 <div class="side">

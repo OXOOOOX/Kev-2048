@@ -1,0 +1,41 @@
+.training-records{margin-top:16px}
+.training-records h2,.training-records h3{margin:0}
+.training-records .tr-head,.training-records .tr-controls,.training-records .tr-board-head,.training-records .tr-axes{display:flex;align-items:center;gap:8px 12px;flex-wrap:wrap}
+.training-records .tr-head,.training-records .tr-board-head{justify-content:space-between}
+.training-records .tr-note,.training-records .tr-metric{color:var(--muted);font-size:12px}
+.training-records .tr-controls{margin:12px 0}
+.training-records label{display:inline-flex;align-items:center;gap:5px;font-size:12px;color:var(--muted)}
+.training-records select{max-width:21ch;border:1px solid var(--line);border-radius:6px;padding:4px 7px;background:var(--paper);color:var(--ink)}
+.training-records .tr-track-scroll{overflow-x:auto;overscroll-behavior-inline:contain}
+.training-records .tr-track{position:relative;height:69px;margin:0 20px}
+.training-records .tr-track::before{content:"";position:absolute;inset:44px 0 auto;height:1px;background:var(--line)}
+.training-records .tr-tick{position:absolute;top:40px;width:2px;height:5px;background:var(--line);pointer-events:none}
+.training-records .tr-step{position:absolute;top:0;transform:translateX(-50%);width:28px;height:67px;padding:0;border:0;background:transparent;color:var(--muted);font:12px var(--num)}
+.training-records .tr-step i{position:absolute;bottom:22px;left:50%;transform:translateX(-50%);height:15px;width:15px;border-radius:3px 3px 0 0;background:#81a68d}
+.training-records .tr-step span{position:absolute;bottom:2px;left:50%;transform:translateX(-50%)}
+.training-records .tr-step[aria-pressed=true]{color:var(--green);font-weight:700}
+.training-records .tr-step[aria-pressed=true] i{height:39px;background:var(--green)}
+.training-records .tr-layout{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:18px;border-top:1px solid var(--line);padding-top:12px}
+.training-records .tr-grid{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:3px;max-width:350px;margin:8px 0}
+.training-records .tr-mini,.training-records .tr-board{display:grid;grid-template:repeat(4,minmax(0,1fr))/repeat(4,minmax(0,1fr));aspect-ratio:1;background:#d4d6c5}
+.training-records .tr-mini{min-width:0;gap:1px;padding:2px;border:0;border-radius:3px}
+.training-records .tr-mini[aria-pressed=true]{outline:2px solid var(--green);outline-offset:-1px}
+.training-records .tr-board{width:min(100%,154px);min-width:0;gap:3px;padding:4px;border-radius:7px}
+.training-records .tr-cell{display:grid;place-items:center;overflow:hidden;min-width:0;min-height:0;background:#e5e5d7;color:#253c2e;border-radius:2px;font:650 17px/1 var(--num)}
+.training-records .tr-cell[data-v="2"]{background:#f5eed4}.training-records .tr-cell[data-v="4"]{background:#e1e7c7}
+.training-records .tr-cell[data-v="8"]{background:#c8dcb0}.training-records .tr-cell[data-v="16"]{background:#aaca9c}
+.training-records .tr-cell[data-v="32"]{background:#85b38a}.training-records .tr-cell[data-v="64"]{background:#5d855f;color:white}
+.training-records .tr-cell[data-v="128"]{background:#e8c58a}.training-records .tr-cell[data-v="256"]{background:#ddaa65}
+.training-records .tr-cell[data-v="512"]{background:#ac5b3c;color:white}
+.training-records .tr-decision{display:grid;grid-template-columns:minmax(80px,154px) minmax(0,1fr);align-items:start;gap:14px;margin:9px 0}
+.training-records .tr-choice{display:grid;gap:3px;margin-bottom:8px;font-size:12px;color:var(--muted)}
+.training-records .tr-choice strong{font-size:15px;color:var(--green)}.training-records .tr-choice:last-child strong{color:var(--warm)}
+.training-records .tr-prob{display:grid;grid-template-columns:2.75em minmax(0,1fr) 7ch;gap:8px;align-items:center;margin:4px 0;font-size:12px}
+.training-records .tr-prob>span{white-space:nowrap}
+.training-records .tr-prob meter{appearance:none;width:100%;height:6px;border:0;border-radius:5px;background:#e2e9df}
+.training-records .tr-prob meter::-webkit-meter-bar{background:#e2e9df;border:0;border-radius:5px;height:6px}
+.training-records .tr-prob meter::-webkit-meter-optimum-value{background:#698574;border-radius:5px}
+.training-records .tr-prob[data-chosen=true] meter::-webkit-meter-optimum-value{background:var(--warm)}
+.training-records .tr-prob output{text-align:right;font-variant-numeric:tabular-nums}
+.training-records .tr-metric{margin-top:8px}.training-records .tr-error{color:var(--warm)}
+@media(max-width:720px){.training-records .tr-layout{grid-template-columns:minmax(0,1fr)}.training-records .tr-grid{max-width:100%}.training-records select{max-width:16ch}}
