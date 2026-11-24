@@ -23,8 +23,8 @@ runs/
 | 我想做什么 | 选哪个文件 |
 |---|---|
 | 回放具体动作，或选择目录批量导入 | 选择对局目录，或直接打开其中的 `moves.jsonl`；同一次运行的不同种子/策略可各是一条轨道 |
-| 看正在进行的训练 | 将 `progress.jsonl` 添加为监控通道；只显示进程实际发出的阶段和进度 |
-| 看已结束的训练或 CPU/GPU 测速 | 添加 `artifacts/result.json` 或 `benchmark.json`；不要把结果摘要当作棋盘回放 |
+| 看正在进行的训练、测评或采集 | 在训练控制台打开自动发现的运行。运行或阶段目录下的 `progress.jsonl` 提供实时进度 |
+| 看已结束的训练或 CPU/GPU 测速 | 在总览选择对应的任务，以 `artifacts/result.json` 或 `benchmark.json` 等已识别的结果生成指标 |
 | 以后复现、比较两次运行 | 可复制 [run.template.json](run.template.json) 为本次目录的 `run.json`，填实际种子、步数上限、设备、代码提交、模型和数据哈希、基线运行 ID |
 
 进度和回放分开写，避免目录里到处放副本。回看器把同目录的逐步日志、原生 `result.json` 和可选 `run.json` 作为一次运行读取；摘要不能单独生成回放，也不要求旧结果补文件。`run.json.files.moves` 和 `files.result` 若填写，须指向同目录中所选文件；不会按清单读取用户未选择的目录。
